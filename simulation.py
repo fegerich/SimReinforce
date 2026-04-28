@@ -1,6 +1,7 @@
 import simpy
 import random
 from etage import Etage
+from fahrgast import Fahrgast
 
 # ── Konfiguration ────────────────────────────────────────────────────────────
 NUM_ETAGEN  = 5
@@ -16,16 +17,6 @@ EINLADEN       = "EINLADEN"
 AUSSTEIGEN     = "AUSSTEIGEN"
 FAHREND_HOCH   = "FAHREND_HOCH"
 FAHREND_RUNTER = "FAHREND_RUNTER"
-
-# ── Klassen ──────────────────────────────────────────────────────────────────
-
-class Fahrgast:
-    def __init__(self, id, start, ziel):
-        self.id           = id
-        self.start        = start
-        self.ziel         = ziel
-        self.wartezeit    = None
-        self.ankunftszeit = None
 
 
 # ── Visualisierung ───────────────────────────────────────────────────────────
