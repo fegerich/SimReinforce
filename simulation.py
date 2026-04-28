@@ -1,5 +1,6 @@
 import simpy
 import random
+from etage import Etage
 
 # ── Konfiguration ────────────────────────────────────────────────────────────
 NUM_ETAGEN  = 5
@@ -17,12 +18,6 @@ FAHREND_HOCH   = "FAHREND_HOCH"
 FAHREND_RUNTER = "FAHREND_RUNTER"
 
 # ── Klassen ──────────────────────────────────────────────────────────────────
-class Etage:
-    def __init__(self, env, nummer):
-        self.nummer     = nummer
-        self.store_up   = simpy.Store(env)
-        self.store_down = simpy.Store(env)
-
 
 class Fahrgast:
     def __init__(self, id, start, ziel):
