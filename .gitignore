@@ -5,3 +5,4 @@ __pycache__/
 
 # Vs code settings
 .vscode
+.vscode/settings.json
