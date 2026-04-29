@@ -9,11 +9,12 @@ FAHREND_RUNTER = "FAHREND_RUNTER"
 
 
 class Aufzug:
-    def __init__(self, env, etagen, num_etagen, fahrt_zeit):
+    def __init__(self, env, etagen, num_etagen, fahrt_zeit, halt_zeit=5):
         self.env            = env
         self.etagen         = etagen
         self.num_etagen     = num_etagen
         self.fahrt_zeit     = fahrt_zeit
+        self.halt_zeit      = halt_zeit
 
         self.aktuelle_etage = 0
         self.fahrtrichtung  = "up"
@@ -75,6 +76,7 @@ class Aufzug:
                 fahrgast = yield store.get()
                 fahrgast.abgeholt.succeed()
                 self.im_aufzug.append(fahrgast)
+            yield self.env.timeout(self.halt_zeit)
 
     def run(self):
         """Hauptprozess - wird von SimPy als Prozess gestartet."""
@@ -88,6 +90,7 @@ class Aufzug:
                 for fahrgast in aussteiger:
                     self.im_aufzug.remove(fahrgast)
                     fahrgast.angekommen.succeed()
+                yield self.env.timeout(self.halt_zeit)
 
             # ── EINLADEN (aktuelle Richtung) ──────────────────────────────
             store = self.etagen[self.aktuelle_etage].store_up \
