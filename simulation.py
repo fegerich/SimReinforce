@@ -1,33 +1,49 @@
 import simpy
 import numpy as np
 import random
+import sys
+from datetime import datetime
 from etage import Etage
 from fahrgast import Fahrgast
 from aufzug import Aufzug
 
+
+class Tee:
+    """Leitet print()-Ausgaben gleichzeitig an Konsole und Datei weiter."""
+    def __init__(self, datei):
+        self._konsole = sys.stdout
+        self._datei   = datei
+
+    def write(self, text):
+        self._konsole.write(text)
+        self._datei.write(text)
+
+    def flush(self):
+        self._konsole.flush()
+        self._datei.flush()
+
 # Simulations Konfiguration
-NUM_ETAGEN  = 5
-SIM_DAUER   = 300
-FAHRT_ZEIT  = 5
-SEED        = 42
+NUM_ETAGEN   = 10
+NUM_AUFZUEGE = 3
+SIM_DAUER    = 300
+FAHRT_ZEIT   = 5
+SEED         = 42
 
 random.seed(SEED)
 
-# Spwaning Konfigurationen
+# Spawning Konfigurationen
 DEFAULT_SPAWN = (30.0, "Default", list(range(NUM_ETAGEN)), list(range(NUM_ETAGEN)))
 TAGESZEITEN = [
   # (start_zeit, end_zeit, spawn_rate, beschreibung, start_etagen, ziel_etagen)
-    (0,   40,  10.0, "Morgens",        [0],                    list(range(1, NUM_ETAGEN))),
-    (80,  120,  15.0, "Anfang Mittagspause",   list(range(1, NUM_ETAGEN)), [0]),
-    (140,  180, 15.0, "Ende Mittagspause", [0],                    list(range(1, NUM_ETAGEN))),
-    (260, 300, 10.0, "Feierabend",         list(range(1, NUM_ETAGEN)), [0]),
+    (0,   40,  10.0, "Morgens",              [0],                    list(range(1, NUM_ETAGEN))),
+    (80,  120, 15.0, "Anfang Mittagspause",  list(range(1, NUM_ETAGEN)), [0]),
+    (140, 180, 15.0, "Ende Mittagspause",    [0],                    list(range(1, NUM_ETAGEN))),
+    (260, 300, 10.0, "Feierabend",           list(range(1, NUM_ETAGEN)), [0]),
 ]
 
 
-
-
-# Prozesse 
-def fahrgast_prozess(env, fahrgast, etagen, aufzug):
+# Prozesse
+def fahrgast_prozess(env, fahrgast, etagen, aufzuege):
     etage      = etagen[fahrgast.start]
     spawn_zeit = env.now
 
@@ -36,7 +52,8 @@ def fahrgast_prozess(env, fahrgast, etagen, aufzug):
     else:
         yield etage.store_down.put(fahrgast)
 
-    aufzug.aufwecken()
+    for a in aufzuege:
+        a.aufwecken()
 
     fahrgast.abgeholt = env.event()
     yield fahrgast.abgeholt
@@ -47,7 +64,6 @@ def fahrgast_prozess(env, fahrgast, etagen, aufzug):
     fahrgast.ankunftszeit = env.now
 
 
-
 def get_tageszeit(now):
     for start, ende, rate, name, starts, ziele in TAGESZEITEN:
         if start <= now < ende:
@@ -55,7 +71,7 @@ def get_tageszeit(now):
     return DEFAULT_SPAWN
 
 
-def fahrgast_generator(env, etagen, aufzug):
+def fahrgast_generator(env, etagen, aufzuege):
     fahrgast_id = 0
     letzte_tageszeit = ""
 
@@ -78,20 +94,35 @@ def fahrgast_generator(env, etagen, aufzug):
             ziel = random.choice(mögliche_ziele)
 
         fahrgast = Fahrgast(fahrgast_id, start, ziel)
-        env.process(fahrgast_prozess(env, fahrgast, etagen, aufzug))
+        env.process(fahrgast_prozess(env, fahrgast, etagen, aufzuege))
         fahrgast_id += 1
 
-# Simulation starten 
+
+# Simulation starten
 def main():
-    env    = simpy.Environment()
-    etagen = [Etage(env, i) for i in range(NUM_ETAGEN)]
+    zeitstempel = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_pfad    = f"simulation_{zeitstempel}.txt"
 
-    aufzug = Aufzug(env, etagen, NUM_ETAGEN, FAHRT_ZEIT)
-    env.process(aufzug.run())
-    env.process(fahrgast_generator(env, etagen, aufzug))
+    with open(log_pfad, "w", encoding="utf-8") as log_datei:
+        sys.stdout = Tee(log_datei)
+        try:
+            env    = simpy.Environment()
+            etagen = [Etage(env, i) for i in range(NUM_ETAGEN)]
 
-    env.run(until=SIM_DAUER)
-    print("\n✅ Simulation beendet.")
+            aufzuege = [
+                Aufzug(env, etagen, NUM_ETAGEN, FAHRT_ZEIT, aufzug_id=chr(ord("A") + i))
+                for i in range(NUM_AUFZUEGE)
+            ]
+            for a in aufzuege:
+                a.alle_aufzuege = aufzuege
+                env.process(a.run())
+
+            env.process(fahrgast_generator(env, etagen, aufzuege))
+
+            env.run(until=SIM_DAUER)
+            print(f"\n✅ Simulation beendet. Log gespeichert: {log_pfad}")
+        finally:
+            sys.stdout = sys.stdout._konsole
 
 
 if __name__ == "__main__":
