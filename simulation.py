@@ -2,6 +2,7 @@ import simpy
 import numpy as np
 import random
 import sys
+import os
 from datetime import datetime
 from etage import Etage
 from fahrgast import Fahrgast
@@ -101,7 +102,8 @@ def fahrgast_generator(env, etagen, aufzuege):
 # Simulation starten
 def main():
     zeitstempel = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_pfad    = f"simulation_{zeitstempel}.txt"
+    os.makedirs("output", exist_ok=True)
+    log_pfad    = os.path.join("output", f"simulation_{zeitstempel}.txt")
 
     with open(log_pfad, "w", encoding="utf-8") as log_datei:
         sys.stdout = Tee(log_datei)
