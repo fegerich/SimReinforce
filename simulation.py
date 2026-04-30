@@ -14,9 +14,9 @@ from logger import Logger
 # Simulations Konfiguration
 NUM_ETAGEN    = 10
 NUM_AUFZUEGE  = 3
-SIM_DAUER     = 500
+SIM_DAUER     = 36_000
 FAHRT_ZEIT    = 5
-MAX_PATIENCE  = 20   # Sekunden bis ein Fahrgast die Treppe nimmt
+MAX_PATIENCE  = 60   # Sekunden bis ein Fahrgast die Treppe nimmt
 SEED          = 42
 
 random.seed(SEED)
@@ -25,10 +25,10 @@ random.seed(SEED)
 DEFAULT_SPAWN = (30.0, "Default", list(range(NUM_ETAGEN)), list(range(NUM_ETAGEN)))
 TAGESZEITEN = [
   # (start_zeit, end_zeit, spawn_rate, beschreibung, start_etagen, ziel_etagen)
-    (0,   40,  10.0, "Morgens",              [0],                    list(range(1, NUM_ETAGEN))),
-    (80,  120, 15.0, "Anfang Mittagspause",  list(range(1, NUM_ETAGEN)), [0]),
-    (140, 180, 15.0, "Ende Mittagspause",    [0],                    list(range(1, NUM_ETAGEN))),
-    (260, 300, 10.0, "Feierabend",           list(range(1, NUM_ETAGEN)), [0]),
+    (0,   3_600,  10.0, "Morgens",              [0],                    list(range(1, NUM_ETAGEN))),
+    (14_400,  15_600, 15.0, "Anfang Mittagspause",  list(range(1, NUM_ETAGEN)), [0]),
+    (16_800, 18_000, 15.0, "Ende Mittagspause",    [0],                    list(range(1, NUM_ETAGEN))),
+    (32_400, 36_000, 10.0, "Feierabend",           list(range(1, NUM_ETAGEN)), [0]),
 ]
 
 
