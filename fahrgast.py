@@ -1,5 +1,5 @@
 class Fahrgast:
-    def __init__(self, id, start, ziel, max_patience=20.0):
+    def __init__(self, id, start, ziel, max_patience=60.0):
         self.id                = id
         self.start             = start
         self.ziel              = ziel
