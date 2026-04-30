@@ -7,7 +7,7 @@ from datetime import datetime
 from etage import Etage
 from fahrgast import Fahrgast
 from aufzug import Aufzug
-from tee import Tee
+from logger import Logger
 
 
 # Simulations Konfiguration
@@ -93,7 +93,7 @@ def main():
     log_pfad    = os.path.join("output", f"simulation_{zeitstempel}.txt")
 
     with open(log_pfad, "w", encoding="utf-8") as log_datei:
-        sys.stdout = Tee(log_datei)
+        sys.stdout = Logger(log_datei)
         try:
             env    = simpy.Environment()
             etagen = [Etage(env, i) for i in range(NUM_ETAGEN)]

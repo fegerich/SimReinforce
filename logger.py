@@ -1,7 +1,7 @@
 import sys
 
 
-class Tee:
+class Logger:
     """Leitet print()-Ausgaben gleichzeitig an Konsole und Datei weiter."""
     def __init__(self, datei):
         self._konsole = sys.stdout
