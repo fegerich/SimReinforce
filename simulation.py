@@ -7,21 +7,8 @@ from datetime import datetime
 from etage import Etage
 from fahrgast import Fahrgast
 from aufzug import Aufzug
+from tee import Tee
 
-
-class Tee:
-    """Leitet print()-Ausgaben gleichzeitig an Konsole und Datei weiter."""
-    def __init__(self, datei):
-        self._konsole = sys.stdout
-        self._datei   = datei
-
-    def write(self, text):
-        self._konsole.write(text)
-        self._datei.write(text)
-
-    def flush(self):
-        self._konsole.flush()
-        self._datei.flush()
 
 # Simulations Konfiguration
 NUM_ETAGEN   = 10
