@@ -88,7 +88,7 @@ def fahrgast_generator(env, etagen, aufzuege):
 
 # Simulation starten
 def main():
-    zeitstempel = datetime.now().strftime("%Y%m%d_%H%M%S")
+    zeitstempel = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
     os.makedirs("output", exist_ok=True)
     log_pfad    = os.path.join("output", f"simulation_{zeitstempel}.txt")
 
