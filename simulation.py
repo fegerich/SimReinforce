@@ -12,11 +12,12 @@ from logger import Logger
 
 
 # Simulations Konfiguration
-NUM_ETAGEN   = 10
-NUM_AUFZUEGE = 3
-SIM_DAUER    = 300
-FAHRT_ZEIT   = 5
-SEED         = 42
+NUM_ETAGEN    = 10
+NUM_AUFZUEGE  = 3
+SIM_DAUER     = 500
+FAHRT_ZEIT    = 5
+MAX_PATIENCE  = 20   # Sekunden bis ein Fahrgast die Treppe nimmt
+SEED          = 42
 
 random.seed(SEED)
 
@@ -33,19 +34,27 @@ TAGESZEITEN = [
 
 # Prozesse
 def fahrgast_prozess(env, fahrgast, etagen, aufzuege, abgeschlossene):
-    etage               = etagen[fahrgast.start]
-    fahrgast.spawnzeit  = env.now
+    etage              = etagen[fahrgast.start]
+    fahrgast.spawnzeit = env.now
+    store              = etage.store_up if fahrgast.ziel > fahrgast.start else etage.store_down
 
-    if fahrgast.ziel > fahrgast.start:
-        yield etage.store_up.put(fahrgast)
-    else:
-        yield etage.store_down.put(fahrgast)
+    yield store.put(fahrgast)
 
     for a in aufzuege:
         a.aufwecken()
 
     fahrgast.abgeholt = env.event()
-    yield fahrgast.abgeholt
+    yield fahrgast.abgeholt | env.timeout(fahrgast.max_patience)
+
+    if not fahrgast.abgeholt.triggered:
+        # Geduld abgelaufen → Treppenhaus
+        fahrgast.nimmt_treppenhaus = True
+        fahrgast.wartezeit         = env.now - fahrgast.spawnzeit
+        if fahrgast in store.items:
+            store.items.remove(fahrgast)
+        abgeschlossene.append(fahrgast)
+        return
+
     fahrgast.einsteigzeit = env.now
     fahrgast.wartezeit    = fahrgast.einsteigzeit - fahrgast.spawnzeit
 
@@ -84,7 +93,7 @@ def fahrgast_generator(env, etagen, aufzuege, abgeschlossene):
         while ziel == start:
             ziel = random.choice(mögliche_ziele)
 
-        fahrgast = Fahrgast(fahrgast_id, start, ziel)
+        fahrgast = Fahrgast(fahrgast_id, start, ziel, max_patience=MAX_PATIENCE)
         env.process(fahrgast_prozess(env, fahrgast, etagen, aufzuege, abgeschlossene))
         fahrgast_id += 1
 
@@ -117,10 +126,18 @@ def main():
             csv_pfad = os.path.join("output", f"fahrgaeste_{zeitstempel}.csv")
             with open(csv_pfad, "w", newline="", encoding="utf-8") as csv_datei:
                 writer = csv.writer(csv_datei)
-                writer.writerow(["Fahrgast_ID", "Spawnzeit", "Einsteigzeit", "Austeigezeit", "Wartezeit", "Startetage", "Zieletage"])
+                writer.writerow(["Fahrgast_ID", "Spawnzeit", "Einsteigzeit", "Austeigezeit", "Wartezeit", "Startetage", "Zieletage", "Nimmt_Treppenhaus"])
                 for fg in abgeschlossene:
-                    wartezeit = fg.einsteigzeit - fg.spawnzeit
-                    writer.writerow([fg.id, fg.spawnzeit, fg.einsteigzeit, fg.ankunftszeit, wartezeit, fg.start, fg.ziel])
+                    writer.writerow([
+                        fg.id,
+                        fg.spawnzeit,
+                        fg.einsteigzeit  if fg.einsteigzeit  is not None else "",
+                        fg.ankunftszeit  if fg.ankunftszeit  is not None else "",
+                        fg.wartezeit,
+                        fg.start,
+                        fg.ziel,
+                        fg.nimmt_treppenhaus,
+                    ])
 
             print(f"\n✅ Simulation beendet. Log: {log_pfad} | Fahrgäste: {csv_pfad}")
         finally:
