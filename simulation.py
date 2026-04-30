@@ -3,6 +3,7 @@ import numpy as np
 import random
 import sys
 import os
+import csv
 from datetime import datetime
 from etage import Etage
 from fahrgast import Fahrgast
@@ -31,9 +32,9 @@ TAGESZEITEN = [
 
 
 # Prozesse
-def fahrgast_prozess(env, fahrgast, etagen, aufzuege):
-    etage      = etagen[fahrgast.start]
-    spawn_zeit = env.now
+def fahrgast_prozess(env, fahrgast, etagen, aufzuege, abgeschlossene):
+    etage               = etagen[fahrgast.start]
+    fahrgast.spawnzeit  = env.now
 
     if fahrgast.ziel > fahrgast.start:
         yield etage.store_up.put(fahrgast)
@@ -45,11 +46,13 @@ def fahrgast_prozess(env, fahrgast, etagen, aufzuege):
 
     fahrgast.abgeholt = env.event()
     yield fahrgast.abgeholt
-    fahrgast.wartezeit = env.now - spawn_zeit
+    fahrgast.einsteigzeit = env.now
+    fahrgast.wartezeit    = fahrgast.einsteigzeit - fahrgast.spawnzeit
 
     fahrgast.angekommen = env.event()
     yield fahrgast.angekommen
     fahrgast.ankunftszeit = env.now
+    abgeschlossene.append(fahrgast)
 
 
 def get_tageszeit(now):
@@ -59,7 +62,7 @@ def get_tageszeit(now):
     return DEFAULT_SPAWN
 
 
-def fahrgast_generator(env, etagen, aufzuege):
+def fahrgast_generator(env, etagen, aufzuege, abgeschlossene):
     fahrgast_id = 0
     letzte_tageszeit = ""
 
@@ -82,7 +85,7 @@ def fahrgast_generator(env, etagen, aufzuege):
             ziel = random.choice(mögliche_ziele)
 
         fahrgast = Fahrgast(fahrgast_id, start, ziel)
-        env.process(fahrgast_prozess(env, fahrgast, etagen, aufzuege))
+        env.process(fahrgast_prozess(env, fahrgast, etagen, aufzuege, abgeschlossene))
         fahrgast_id += 1
 
 
@@ -106,10 +109,20 @@ def main():
                 a.alle_aufzuege = aufzuege
                 env.process(a.run())
 
-            env.process(fahrgast_generator(env, etagen, aufzuege))
+            abgeschlossene = []
+            env.process(fahrgast_generator(env, etagen, aufzuege, abgeschlossene))
 
             env.run(until=SIM_DAUER)
-            print(f"\n✅ Simulation beendet. Log gespeichert: {log_pfad}")
+
+            csv_pfad = os.path.join("output", f"fahrgaeste_{zeitstempel}.csv")
+            with open(csv_pfad, "w", newline="", encoding="utf-8") as csv_datei:
+                writer = csv.writer(csv_datei)
+                writer.writerow(["Fahrgast_ID", "Spawnzeit", "Einsteigzeit", "Austeigezeit", "Wartezeit", "Startetage", "Zieletage"])
+                for fg in abgeschlossene:
+                    wartezeit = fg.einsteigzeit - fg.spawnzeit
+                    writer.writerow([fg.id, fg.spawnzeit, fg.einsteigzeit, fg.ankunftszeit, wartezeit, fg.start, fg.ziel])
+
+            print(f"\n✅ Simulation beendet. Log: {log_pfad} | Fahrgäste: {csv_pfad}")
         finally:
             sys.stdout = sys.stdout._konsole
 
