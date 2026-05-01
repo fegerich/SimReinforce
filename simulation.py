@@ -14,9 +14,9 @@ from logger import Logger
 # Simulations Konfiguration
 NUM_ETAGEN    = 10
 NUM_AUFZUEGE  = 3
-SIM_DAUER     = 36_000
+SPAWN_ENDE    = 36_000   # Sekunde ab der keine neuen Fahrgäste mehr spawnen
 FAHRT_ZEIT    = 5
-MAX_PATIENCE  = 60   # Sekunden bis ein Fahrgast die Treppe nimmt
+MAX_PATIENCE  = 60       # Sekunden bis ein Fahrgast die Treppe nimmt
 SEED          = 42
 
 random.seed(SEED)
@@ -25,15 +25,41 @@ random.seed(SEED)
 DEFAULT_SPAWN = (30.0, "Default", list(range(NUM_ETAGEN)), list(range(NUM_ETAGEN)))
 TAGESZEITEN = [
   # (start_zeit, end_zeit, spawn_rate, beschreibung, start_etagen, ziel_etagen)
-    (0,   3_600,  10.0, "Morgens",              [0],                    list(range(1, NUM_ETAGEN))),
-    (14_400,  15_600, 15.0, "Anfang Mittagspause",  list(range(1, NUM_ETAGEN)), [0]),
-    (16_800, 18_000, 15.0, "Ende Mittagspause",    [0],                    list(range(1, NUM_ETAGEN))),
-    (32_400, 36_000, 10.0, "Feierabend",           list(range(1, NUM_ETAGEN)), [0]),
+    (0,      3_600,  10.0, "Morgens",             [0],                    list(range(1, NUM_ETAGEN))),
+    (14_400, 15_600, 15.0, "Anfang Mittagspause", list(range(1, NUM_ETAGEN)), [0]),
+    (16_800, 18_000, 15.0, "Ende Mittagspause",   [0],                    list(range(1, NUM_ETAGEN))),
+    (32_400, 36_000, 10.0, "Feierabend",          list(range(1, NUM_ETAGEN)), [0]),
 ]
 
 
+class SimEnde:
+    """Feuert ein SimPy-Event sobald das Spawnen gestoppt wurde
+    und alle Fahrgäste ihr Ziel erreicht oder die Treppe genommen haben."""
+
+    def __init__(self, env):
+        self._env          = env
+        self._aktive       = 0
+        self._spawn_fertig = False
+        self.fertig        = env.event()
+
+    def fahrgast_gestartet(self):
+        self._aktive += 1
+
+    def fahrgast_abgeschlossen(self):
+        self._aktive -= 1
+        self._pruefen()
+
+    def spawning_beendet(self):
+        self._spawn_fertig = True
+        self._pruefen()
+
+    def _pruefen(self):
+        if self._spawn_fertig and self._aktive == 0 and not self.fertig.triggered:
+            self.fertig.succeed()
+
+
 # Prozesse
-def fahrgast_prozess(env, fahrgast, etagen, aufzuege, abgeschlossene):
+def fahrgast_prozess(env, fahrgast, etagen, aufzuege, abgeschlossene, sim_ende):
     etage              = etagen[fahrgast.start]
     fahrgast.spawnzeit = env.now
     store              = etage.store_up if fahrgast.ziel > fahrgast.start else etage.store_down
@@ -53,6 +79,7 @@ def fahrgast_prozess(env, fahrgast, etagen, aufzuege, abgeschlossene):
         if fahrgast in store.items:
             store.items.remove(fahrgast)
         abgeschlossene.append(fahrgast)
+        sim_ende.fahrgast_abgeschlossen()
         return
 
     fahrgast.einsteigzeit = env.now
@@ -62,6 +89,7 @@ def fahrgast_prozess(env, fahrgast, etagen, aufzuege, abgeschlossene):
     yield fahrgast.angekommen
     fahrgast.ankunftszeit = env.now
     abgeschlossene.append(fahrgast)
+    sim_ende.fahrgast_abgeschlossen()
 
 
 def get_tageszeit(now):
@@ -71,38 +99,42 @@ def get_tageszeit(now):
     return DEFAULT_SPAWN
 
 
-def fahrgast_generator(env, etagen, aufzuege, abgeschlossene):
-    fahrgast_id = 0
+def fahrgast_generator(env, etagen, aufzuege, abgeschlossene, sim_ende):
+    fahrgast_id      = 0
     letzte_tageszeit = ""
 
     while True:
         rate, name, mögliche_starts, mögliche_ziele = get_tageszeit(env.now)
 
-        # Tageszeit-Wechsel anzeigen
         if name != letzte_tageszeit:
             print(f"\n  ⏰ Tageszeit: {name}  (Spawn-Rate: alle ~{rate:.1f}s)")
             letzte_tageszeit = name
 
-        # Exponentialverteilung: Zeit bis zum nächsten Fahrgast
         wartezeit = np.random.exponential(rate)
-        yield env.timeout(max(1, wartezeit))  # mindestens 1s warten
+        yield env.timeout(max(1, wartezeit))
 
-        # Start und Ziel aus der aktuellen Tageszeit wählen
+        if env.now >= SPAWN_ENDE:
+            break
+
         start = random.choice(mögliche_starts)
         ziel  = random.choice(mögliche_ziele)
         while ziel == start:
             ziel = random.choice(mögliche_ziele)
 
         fahrgast = Fahrgast(fahrgast_id, start, ziel, max_patience=MAX_PATIENCE)
-        env.process(fahrgast_prozess(env, fahrgast, etagen, aufzuege, abgeschlossene))
+        sim_ende.fahrgast_gestartet()
+        env.process(fahrgast_prozess(env, fahrgast, etagen, aufzuege, abgeschlossene, sim_ende))
         fahrgast_id += 1
+
+    print(f"\n  🚫 Spawning gestoppt bei t={env.now:.0f}s — warte auf {sim_ende._aktive} verbleibende Fahrgäste ...")
+    sim_ende.spawning_beendet()
 
 
 # Simulation starten
 def main():
     zeitstempel = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
     os.makedirs("output", exist_ok=True)
-    log_pfad    = os.path.join("output", f"simulation_{zeitstempel}.txt")
+    log_pfad = os.path.join("output", f"simulation_{zeitstempel}.txt")
 
     with open(log_pfad, "w", encoding="utf-8") as log_datei:
         sys.stdout = Logger(log_datei)
@@ -119,9 +151,10 @@ def main():
                 env.process(a.run())
 
             abgeschlossene = []
-            env.process(fahrgast_generator(env, etagen, aufzuege, abgeschlossene))
+            sim_ende       = SimEnde(env)
+            env.process(fahrgast_generator(env, etagen, aufzuege, abgeschlossene, sim_ende))
 
-            env.run(until=SIM_DAUER)
+            env.run(until=sim_ende.fertig)
 
             csv_pfad = os.path.join("output", f"fahrgaeste_{zeitstempel}.csv")
             with open(csv_pfad, "w", newline="", encoding="utf-8") as csv_datei:
@@ -131,15 +164,15 @@ def main():
                     writer.writerow([
                         fg.id,
                         fg.spawnzeit,
-                        fg.einsteigzeit  if fg.einsteigzeit  is not None else "",
-                        fg.ankunftszeit  if fg.ankunftszeit  is not None else "",
+                        fg.einsteigzeit if fg.einsteigzeit is not None else "",
+                        fg.ankunftszeit if fg.ankunftszeit is not None else "",
                         fg.wartezeit,
                         fg.start,
                         fg.ziel,
                         fg.nimmt_treppenhaus,
                     ])
 
-            print(f"\n✅ Simulation beendet. Log: {log_pfad} | Fahrgäste: {csv_pfad}")
+            print(f"\n✅ Simulation beendet bei t={env.now:.0f}s. Log: {log_pfad} | Fahrgäste: {csv_pfad}")
         finally:
             sys.stdout = sys.stdout._konsole
 
