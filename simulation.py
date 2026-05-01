@@ -16,8 +16,9 @@ NUM_ETAGEN    = 10
 NUM_AUFZUEGE  = 3
 SPAWN_ENDE    = 36_000   # Sekunde ab der keine neuen Fahrgäste mehr spawnen
 FAHRT_ZEIT    = 5
+MAX_KAPAZITAET = 5       # Maximale Anzahl Fahrgäste pro Aufzug
 MAX_PATIENCE  = 60       # Sekunden bis ein Fahrgast die Treppe nimmt
-SEED          = 42
+SEED          = 69
 
 random.seed(SEED)
 
@@ -89,7 +90,6 @@ def fahrgast_prozess(env, fahrgast, etagen, aufzuege, abgeschlossene, sim_ende, 
     fahrgast.einsteigzeit = env.now
     fahrgast.wartezeit    = fahrgast.einsteigzeit - fahrgast.spawnzeit
 
-    fahrgast.angekommen = env.event()
     yield fahrgast.angekommen
     fahrgast.ankunftszeit = env.now
     abgeschlossene.append(fahrgast)
@@ -151,7 +151,7 @@ def main():
             logger.init_schritte(schritt_pfad, etagen)
 
             aufzuege = [
-                Aufzug(env, etagen, NUM_ETAGEN, FAHRT_ZEIT, aufzug_id=chr(ord("A") + i), schrittlogger=logger)
+                Aufzug(env, etagen, NUM_ETAGEN, FAHRT_ZEIT, aufzug_id=chr(ord("A") + i), kapazitaet=MAX_KAPAZITAET, schrittlogger=logger)
                 for i in range(NUM_AUFZUEGE)
             ]
             for a in aufzuege:

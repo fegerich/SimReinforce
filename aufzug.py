@@ -7,13 +7,14 @@ FAHREND_RUNTER = "FAHREND_RUNTER"
 
 
 class Aufzug:
-    def __init__(self, env, etagen, num_etagen, fahrt_zeit, halt_zeit=5, aufzug_id="A", schrittlogger=None):
+    def __init__(self, env, etagen, num_etagen, fahrt_zeit, halt_zeit=5, aufzug_id="A", kapazitaet=5, schrittlogger=None):
         self.env            = env
         self.etagen         = etagen
         self.num_etagen     = num_etagen
         self.fahrt_zeit     = fahrt_zeit
         self.halt_zeit      = halt_zeit
         self.aufzug_id      = aufzug_id
+        self.kapazitaet     = kapazitaet
         self.schrittlogger  = schrittlogger
 
         self.aktuelle_etage = 0
@@ -72,12 +73,17 @@ class Aufzug:
         return self.fahrtrichtung  # niemand wartet → Richtung beibehalten
 
     def _einladen(self, store):
-        """Hilfsgenerator: lädt alle Fahrgäste aus dem Store."""
-        if len(store.items) > 0:
+        """Hilfsgenerator: lädt Fahrgäste aus dem Store bis zur Kapazitätsgrenze."""
+        if len(store.items) > 0 and len(self.im_aufzug) < self.kapazitaet:
             self.zustand = EINLADEN
             self.visualisiere()
-            while len(store.items) > 0:
+            while len(store.items) > 0 and len(self.im_aufzug) < self.kapazitaet:
                 fahrgast = yield store.get()
+                # Race condition: fahrgast_prozess kann den Treppenhaus-Pfad
+                # genommen haben bevor wir abgeholt.succeed() aufrufen konnten.
+                if fahrgast.nimmt_treppenhaus:
+                    continue
+                fahrgast.angekommen = self.env.event()
                 fahrgast.abgeholt.succeed()
                 self.im_aufzug.append(fahrgast)
                 if self.schrittlogger:

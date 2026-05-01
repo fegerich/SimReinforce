@@ -9,3 +9,5 @@ class Fahrgast:
         self.wartezeit         = None
         self.ankunftszeit      = None
         self.nimmt_treppenhaus = False
+        self.abgeholt          = None
+        self.angekommen        = None
