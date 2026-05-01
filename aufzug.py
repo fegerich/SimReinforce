@@ -1,5 +1,3 @@
-import simpy
-
 # Zustände
 WARTEND        = "WARTEND"
 EINLADEN       = "EINLADEN"
@@ -9,13 +7,14 @@ FAHREND_RUNTER = "FAHREND_RUNTER"
 
 
 class Aufzug:
-    def __init__(self, env, etagen, num_etagen, fahrt_zeit, halt_zeit=5, aufzug_id="A"):
+    def __init__(self, env, etagen, num_etagen, fahrt_zeit, halt_zeit=5, aufzug_id="A", schrittlogger=None):
         self.env            = env
         self.etagen         = etagen
         self.num_etagen     = num_etagen
         self.fahrt_zeit     = fahrt_zeit
         self.halt_zeit      = halt_zeit
         self.aufzug_id      = aufzug_id
+        self.schrittlogger  = schrittlogger
 
         self.aktuelle_etage = 0
         self.fahrtrichtung  = "up"
@@ -81,6 +80,8 @@ class Aufzug:
                 fahrgast = yield store.get()
                 fahrgast.abgeholt.succeed()
                 self.im_aufzug.append(fahrgast)
+                if self.schrittlogger:
+                    self.schrittlogger.fahrgast_eingestiegen(self.env.now, self, fahrgast)
             yield self.env.timeout(self.halt_zeit)
 
     def run(self):
@@ -95,6 +96,8 @@ class Aufzug:
                 for fahrgast in aussteiger:
                     self.im_aufzug.remove(fahrgast)
                     fahrgast.angekommen.succeed()
+                    if self.schrittlogger:
+                        self.schrittlogger.fahrgast_angekommen(self.env.now, self, fahrgast)
                 yield self.env.timeout(self.halt_zeit)
 
             # ── EINLADEN (aktuelle Richtung) ──────────────────────────────
@@ -109,6 +112,8 @@ class Aufzug:
             if not self.im_aufzug and not self.ziele_in_richtung():
                 self.zustand = WARTEND
                 self.visualisiere()
+                if self.schrittlogger:
+                    self.schrittlogger.aufzug_wartend(self.env.now, self)
                 self.warte_event = self.env.event()
                 if not self.irgendwo_wartende():
                     yield self.warte_event
@@ -132,6 +137,8 @@ class Aufzug:
 
             self.zustand = FAHREND_HOCH if self.fahrtrichtung == "up" else FAHREND_RUNTER
             self.visualisiere()
+            if self.schrittlogger:
+                self.schrittlogger.aufzug_fahrend(self.env.now, self)
             yield self.env.timeout(self.fahrt_zeit)
 
             if self.fahrtrichtung == "up":

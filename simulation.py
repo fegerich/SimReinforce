@@ -9,6 +9,7 @@ from etage import Etage
 from fahrgast import Fahrgast
 from aufzug import Aufzug
 from logger import Logger
+from schrittlogger import SchrittLogger
 
 
 # Simulations Konfiguration
@@ -59,12 +60,14 @@ class SimEnde:
 
 
 # Prozesse
-def fahrgast_prozess(env, fahrgast, etagen, aufzuege, abgeschlossene, sim_ende):
+def fahrgast_prozess(env, fahrgast, etagen, aufzuege, abgeschlossene, sim_ende, schrittlogger=None):
     etage              = etagen[fahrgast.start]
     fahrgast.spawnzeit = env.now
     store              = etage.store_up if fahrgast.ziel > fahrgast.start else etage.store_down
 
     yield store.put(fahrgast)
+    if schrittlogger:
+        schrittlogger.fahrgast_spawn(env.now, fahrgast)
 
     for a in aufzuege:
         a.aufwecken()
@@ -78,6 +81,8 @@ def fahrgast_prozess(env, fahrgast, etagen, aufzuege, abgeschlossene, sim_ende):
         fahrgast.wartezeit         = env.now - fahrgast.spawnzeit
         if fahrgast in store.items:
             store.items.remove(fahrgast)
+        if schrittlogger:
+            schrittlogger.fahrgast_treppenhaus(env.now, fahrgast)
         abgeschlossene.append(fahrgast)
         sim_ende.fahrgast_abgeschlossen()
         return
@@ -99,7 +104,7 @@ def get_tageszeit(now):
     return DEFAULT_SPAWN
 
 
-def fahrgast_generator(env, etagen, aufzuege, abgeschlossene, sim_ende):
+def fahrgast_generator(env, etagen, aufzuege, abgeschlossene, sim_ende, schrittlogger=None):
     fahrgast_id      = 0
     letzte_tageszeit = ""
 
@@ -123,7 +128,7 @@ def fahrgast_generator(env, etagen, aufzuege, abgeschlossene, sim_ende):
 
         fahrgast = Fahrgast(fahrgast_id, start, ziel, max_patience=MAX_PATIENCE)
         sim_ende.fahrgast_gestartet()
-        env.process(fahrgast_prozess(env, fahrgast, etagen, aufzuege, abgeschlossene, sim_ende))
+        env.process(fahrgast_prozess(env, fahrgast, etagen, aufzuege, abgeschlossene, sim_ende, schrittlogger))
         fahrgast_id += 1
 
     print(f"\n  🚫 Spawning gestoppt bei t={env.now:.0f}s — warte auf {sim_ende._aktive} verbleibende Fahrgäste ...")
@@ -142,8 +147,11 @@ def main():
             env    = simpy.Environment()
             etagen = [Etage(env, i) for i in range(NUM_ETAGEN)]
 
+            schritt_pfad  = os.path.join("output", f"schritte_{zeitstempel}.csv")
+            schrittlogger = SchrittLogger(schritt_pfad, etagen)
+
             aufzuege = [
-                Aufzug(env, etagen, NUM_ETAGEN, FAHRT_ZEIT, aufzug_id=chr(ord("A") + i))
+                Aufzug(env, etagen, NUM_ETAGEN, FAHRT_ZEIT, aufzug_id=chr(ord("A") + i), schrittlogger=schrittlogger)
                 for i in range(NUM_AUFZUEGE)
             ]
             for a in aufzuege:
@@ -152,9 +160,10 @@ def main():
 
             abgeschlossene = []
             sim_ende       = SimEnde(env)
-            env.process(fahrgast_generator(env, etagen, aufzuege, abgeschlossene, sim_ende))
+            env.process(fahrgast_generator(env, etagen, aufzuege, abgeschlossene, sim_ende, schrittlogger))
 
             env.run(until=sim_ende.fertig)
+            schrittlogger.schliessen()
 
             csv_pfad = os.path.join("output", f"fahrgaeste_{zeitstempel}.csv")
             with open(csv_pfad, "w", newline="", encoding="utf-8") as csv_datei:
@@ -172,7 +181,7 @@ def main():
                         fg.nimmt_treppenhaus,
                     ])
 
-            print(f"\n✅ Simulation beendet bei t={env.now:.0f}s. Log: {log_pfad} | Fahrgäste: {csv_pfad}")
+            print(f"\n✅ Simulation beendet bei t={env.now:.0f}s. Log: {log_pfad} | Fahrgäste: {csv_pfad} | Schritte: {schritt_pfad}")
         finally:
             sys.stdout = sys.stdout._konsole
 
