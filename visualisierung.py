@@ -203,11 +203,11 @@ class SimVisualisierung:
         self._zeichne_steuerleiste(s)
 
     def _zeichne_titel(self, s):
-        self._txt("SimReinforce – Schritt-Visualisierung", 12, 8, self._font_l, WEISS)
+        self._txt("Fahrstuhlsimulation Visualisierung", 12, 8, self._font_l, WEISS)
         if s:
             self._txt(
-                f"t = {s['t']:.0f}s   Schritt {self._index + 1} / {len(self._schritte)}",
-                self.BREITE - 310, 10, self._font_m, GRAU,
+                f"{self._uhrzeit(s['t'])}   Schritt {self._index + 1} / {len(self._schritte)}",
+                self.BREITE - 360, 10, self._font_m, GRAU,
             )
 
     def _zeichne_gebaeude(self, s):
@@ -373,10 +373,18 @@ class SimVisualisierung:
 
         if s and self._schritte:
             t_end = self._schritte[-1]["t"]
-            self._txt(f"t = {s['t']:.0f}s / {t_end:.0f}s",
-                      bw - 220, y + 28, self._font_m, GRAU)
+            self._txt(f"{self._uhrzeit(s['t'])} / {self._uhrzeit(t_end)}",
+                      bw - 270, y + 28, self._font_m, GRAU)
 
     # ── Hilfsmethoden ─────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _uhrzeit(sekunden, start_stunde=8):
+        gesamt_sek = int(start_stunde * 3600 + sekunden)
+        h = (gesamt_sek // 3600) % 24
+        m = (gesamt_sek % 3600) // 60
+        s = gesamt_sek % 60
+        return f"{h:02d}:{m:02d}:{s:02d}"
 
     def _txt(self, text, x, y, font, farbe):
         self._screen.blit(font.render(str(text), True, farbe), (x, y))
