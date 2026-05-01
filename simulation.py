@@ -9,7 +9,6 @@ from etage import Etage
 from fahrgast import Fahrgast
 from aufzug import Aufzug
 from logger import Logger
-from schrittlogger import SchrittLogger
 
 
 # Simulations Konfiguration
@@ -142,16 +141,17 @@ def main():
     log_pfad = os.path.join("output", f"simulation_{zeitstempel}.txt")
 
     with open(log_pfad, "w", encoding="utf-8") as log_datei:
-        sys.stdout = Logger(log_datei)
+        logger     = Logger(log_datei)
+        sys.stdout = logger
         try:
             env    = simpy.Environment()
             etagen = [Etage(env, i) for i in range(NUM_ETAGEN)]
 
-            schritt_pfad  = os.path.join("output", f"schritte_{zeitstempel}.csv")
-            schrittlogger = SchrittLogger(schritt_pfad, etagen)
+            schritt_pfad = os.path.join("output", f"schritte_{zeitstempel}.csv")
+            logger.init_schritte(schritt_pfad, etagen)
 
             aufzuege = [
-                Aufzug(env, etagen, NUM_ETAGEN, FAHRT_ZEIT, aufzug_id=chr(ord("A") + i), schrittlogger=schrittlogger)
+                Aufzug(env, etagen, NUM_ETAGEN, FAHRT_ZEIT, aufzug_id=chr(ord("A") + i), schrittlogger=logger)
                 for i in range(NUM_AUFZUEGE)
             ]
             for a in aufzuege:
@@ -160,10 +160,10 @@ def main():
 
             abgeschlossene = []
             sim_ende       = SimEnde(env)
-            env.process(fahrgast_generator(env, etagen, aufzuege, abgeschlossene, sim_ende, schrittlogger))
+            env.process(fahrgast_generator(env, etagen, aufzuege, abgeschlossene, sim_ende, logger))
 
             env.run(until=sim_ende.fertig)
-            schrittlogger.schliessen()
+            logger.schliessen()
 
             csv_pfad = os.path.join("output", f"fahrgaeste_{zeitstempel}.csv")
             with open(csv_pfad, "w", newline="", encoding="utf-8") as csv_datei:
@@ -183,7 +183,7 @@ def main():
 
             print(f"\n✅ Simulation beendet bei t={env.now:.0f}s. Log: {log_pfad} | Fahrgäste: {csv_pfad} | Schritte: {schritt_pfad}")
         finally:
-            sys.stdout = sys.stdout._konsole
+            sys.stdout = logger._konsole
 
 
 if __name__ == "__main__":
