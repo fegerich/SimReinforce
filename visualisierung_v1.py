@@ -1,6 +1,5 @@
 import pygame
 import csv
-import sys
 import copy
 
 # ── Farben ────────────────────────────────────────────────────────────────────
@@ -146,7 +145,7 @@ class SimVisualisierung:
             for ev in pygame.event.get():
                 if ev.type == pygame.QUIT:
                     pygame.quit()
-                    sys.exit()
+                    return
                 if ev.type == pygame.KEYDOWN:
                     self._taste(ev.key)
                 if ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
@@ -394,8 +393,5 @@ class SimVisualisierung:
                          (px + 8, y), (px + pw - 8, y))
 
 
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Verwendung: python visualisierung.py <pfad/zur/schritte_*.csv>")
-        sys.exit(1)
-    SimVisualisierung(sys.argv[1]).run()
+# if __name__ == "__main__":
+#     SimVisualisierung("output\schritte_2026_05_02-16_45_09.csv").run()

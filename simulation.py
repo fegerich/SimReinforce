@@ -10,6 +10,7 @@ from fahrgast import Fahrgast
 from aufzug import Aufzug
 from logger import Logger
 from Visualisierung.StatDrawer import StatDrawer
+from visualisierung_v1 import SimVisualisierung
 
 
 # Simulations Konfiguration
@@ -20,7 +21,9 @@ FAHRT_ZEIT    = 5
 MAX_KAPAZITAET = 5       # Maximale Anzahl Fahrgäste pro Aufzug
 MAX_PATIENCE  = 240       # Sekunden bis ein Fahrgast die Treppe nimmt
 SEED          = 17
+
 ZEIGE_STATISTIKEN = True
+ZEIGE_VISUALISERUNG = True
 random.seed(SEED)
 
 # Spawning Konfigurationen
@@ -184,6 +187,8 @@ def main():
             print()
             print(f"Simulation beendet bei t={env.now:.0f}s. Log: {log_pfad} | Fahrgäste: {csv_pfad} | Schritte: {schritt_pfad}")
 
+            if (ZEIGE_VISUALISERUNG):
+                SimVisualisierung(schritt_pfad).run()
             if (ZEIGE_STATISTIKEN):
                 statdrawer = StatDrawer()
                 statdrawer.visualisiere_aufkommen(csv_pfad, zeitstempel)
