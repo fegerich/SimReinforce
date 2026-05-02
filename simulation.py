@@ -21,8 +21,8 @@ MAX_KAPAZITAET = 5       # Maximale Anzahl Fahrgäste pro Aufzug
 MAX_PATIENCE  = 240       # Sekunden bis ein Fahrgast die Treppe nimmt
 SEED          = 17
 
-ZEIGE_STATISTIKEN = True
-ZEIGE_VISUALISERUNG = True
+ZEIGE_VISUALISERUNG = False
+ZEIGE_STATISTIKEN = False
 random.seed(SEED)
 
 # Spawning Konfigurationen
@@ -172,6 +172,24 @@ def main():
                 fg.ziel,
                 fg.nimmt_treppenhaus,
             ])
+
+    end_sek = env.now
+    end_uhrzeit = f"{8 + end_sek // 3600:02.0f}:{(end_sek % 3600) // 60:02.0f}:{end_sek % 60:02.0f}"
+
+    total_fahrgäste            = len(abgeschlossene)
+    angekommen        = sum(1 for fg in abgeschlossene if not fg.nimmt_treppenhaus)
+    treppenhaus       = sum(1 for fg in abgeschlossene if fg.nimmt_treppenhaus)
+    anteil_treppenhaus = round((treppenhaus / total_fahrgäste) * 100, 2)
+    avg_wartezeit     = sum(fg.wartezeit for fg in abgeschlossene) / total_fahrgäste if total_fahrgäste > 0 else 0
+
+    print()
+    print("-" * 12, "Simulation gestartet um 08:00:00", "-" * 12)
+    print(f"Fahrgäste gesamt:               {total_fahrgäste}")
+    print(f"Erfolgreich angekommen:         {angekommen}")
+    print(f"Treppenhaus genommen:           {treppenhaus}")
+    print(f"Anteil Treppenhaus:             {anteil_treppenhaus}%")
+    print(f"Durchschnittliche Wartezeit:    {avg_wartezeit:.1f}s")
+    print("-" * 12, f"Simulation beendet um {end_uhrzeit}", "-" * 12)
 
     if ZEIGE_VISUALISERUNG:
         SimVisualisierung(schritt_pfad).run()
