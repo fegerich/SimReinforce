@@ -1,4 +1,3 @@
-import sys
 import csv
 
 # Zustände für Simulationslog Schritte.csv
@@ -19,25 +18,12 @@ _SPALTEN = [
 
 
 class Logger:
-    """Leitet print()-Ausgaben gleichzeitig an Konsole und Datei weiter
-    und schreibt Simulationsschritte in eine CSV-Datei."""
+    """Schreibt Simulationsschritte in eine CSV-Datei."""
 
-    def __init__(self, datei):
-        self._konsole   = sys.stdout
-        self._datei     = datei
+    def __init__(self):
         self._etagen    = None
         self._csv_datei = None
         self._writer    = None
-
-    # ── stdout-Weiterleitung ──────────────────────────────────────────────────
-
-    def write(self, text):
-        self._konsole.write(text)
-        self._datei.write(text)
-
-    def flush(self):
-        self._konsole.flush()
-        self._datei.flush()
 
     # ── Schrittlog-Initialisierung ────────────────────────────────────────────
 

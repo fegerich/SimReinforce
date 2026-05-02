@@ -1,7 +1,6 @@
 import simpy
 import numpy as np
 import random
-import sys
 import os
 import csv
 from datetime import datetime
@@ -108,15 +107,10 @@ def get_tageszeit(now):
 
 
 def fahrgast_generator(env, etagen, aufzuege, abgeschlossene, sim_ende, schrittlogger=None):
-    fahrgast_id      = 0
-    letzte_tageszeit = ""
+    fahrgast_id = 0
 
     while True:
-        rate, name, mögliche_starts, mögliche_ziele = get_tageszeit(env.now)
-
-        if name != letzte_tageszeit:
-            print(f"\n  ⏰ Tageszeit: {name}  (Spawn-Rate: alle ~{rate:.1f}s)")
-            letzte_tageszeit = name
+        rate, _, mögliche_starts, mögliche_ziele = get_tageszeit(env.now)
 
         wartezeit = np.random.exponential(rate)
         yield env.timeout(max(1, wartezeit))
@@ -134,7 +128,6 @@ def fahrgast_generator(env, etagen, aufzuege, abgeschlossene, sim_ende, schrittl
         env.process(fahrgast_prozess(env, fahrgast, etagen, aufzuege, abgeschlossene, sim_ende, schrittlogger))
         fahrgast_id += 1
 
-    print(f"\n Spawning gestoppt bei t={env.now:.0f}s — warte auf {sim_ende._aktive} verbleibende Fahrgäste ...")
     sim_ende.spawning_beendet()
 
 
@@ -142,60 +135,51 @@ def fahrgast_generator(env, etagen, aufzuege, abgeschlossene, sim_ende, schrittl
 def main():
     zeitstempel = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
     os.makedirs("output", exist_ok=True)
-    log_pfad = os.path.join("output", f"simulation_{zeitstempel}.txt")
 
-    with open(log_pfad, "w", encoding="utf-8") as log_datei:
-        logger     = Logger(log_datei)
-        sys.stdout = logger
-        try:
-            env    = simpy.Environment()
-            etagen = [Etage(env, i) for i in range(NUM_ETAGEN)]
+    env    = simpy.Environment()
+    etagen = [Etage(env, i) for i in range(NUM_ETAGEN)]
 
-            schritt_pfad = os.path.join("output", f"schritte_{zeitstempel}.csv")
-            logger.init_schritte(schritt_pfad, etagen)
+    logger       = Logger()
+    schritt_pfad = os.path.join("output", f"schritte_{zeitstempel}.csv")
+    logger.init_schritte(schritt_pfad, etagen)
 
-            aufzuege = [
-                Aufzug(env, etagen, NUM_ETAGEN, FAHRT_ZEIT, aufzug_id=chr(ord("A") + i), kapazitaet=MAX_KAPAZITAET, schrittlogger=logger)
-                for i in range(NUM_AUFZUEGE)
-            ]
-            for a in aufzuege:
-                a.alle_aufzuege = aufzuege
-                env.process(a.run())
+    aufzuege = [
+        Aufzug(env, etagen, NUM_ETAGEN, FAHRT_ZEIT, aufzug_id=chr(ord("A") + i), kapazitaet=MAX_KAPAZITAET, schrittlogger=logger)
+        for i in range(NUM_AUFZUEGE)
+    ]
+    for a in aufzuege:
+        env.process(a.run())
 
-            abgeschlossene = []
-            sim_ende       = SimEnde(env)
-            env.process(fahrgast_generator(env, etagen, aufzuege, abgeschlossene, sim_ende, logger))
+    abgeschlossene = []
+    sim_ende       = SimEnde(env)
+    env.process(fahrgast_generator(env, etagen, aufzuege, abgeschlossene, sim_ende, logger))
 
-            env.run(until=sim_ende.fertig)
-            logger.schliessen()
+    env.run(until=sim_ende.fertig)
+    logger.schliessen()
 
-            csv_pfad = os.path.join("output", f"fahrgaeste_{zeitstempel}.csv")
-            with open(csv_pfad, "w", newline="", encoding="utf-8") as csv_datei:
-                writer = csv.writer(csv_datei)
-                writer.writerow(["Fahrgast_ID", "Spawnzeit", "Einsteigzeit", "Austeigezeit", "Wartezeit", "Startetage", "Zieletage", "Nimmt_Treppenhaus"])
-                for fg in abgeschlossene:
-                    writer.writerow([
-                        fg.id,
-                        fg.spawnzeit,
-                        fg.einsteigzeit if fg.einsteigzeit is not None else "",
-                        fg.ankunftszeit if fg.ankunftszeit is not None else "",
-                        fg.wartezeit,
-                        fg.start,
-                        fg.ziel,
-                        fg.nimmt_treppenhaus,
-                    ])
-            print()
-            print(f"Simulation beendet bei t={env.now:.0f}s. Log: {log_pfad} | Fahrgäste: {csv_pfad} | Schritte: {schritt_pfad}")
+    csv_pfad = os.path.join("output", f"fahrgaeste_{zeitstempel}.csv")
+    with open(csv_pfad, "w", newline="", encoding="utf-8") as csv_datei:
+        writer = csv.writer(csv_datei)
+        writer.writerow(["Fahrgast_ID", "Spawnzeit", "Einsteigzeit", "Austeigezeit", "Wartezeit", "Startetage", "Zieletage", "Nimmt_Treppenhaus"])
+        for fg in abgeschlossene:
+            writer.writerow([
+                fg.id,
+                fg.spawnzeit,
+                fg.einsteigzeit if fg.einsteigzeit is not None else "",
+                fg.ankunftszeit if fg.ankunftszeit is not None else "",
+                fg.wartezeit,
+                fg.start,
+                fg.ziel,
+                fg.nimmt_treppenhaus,
+            ])
 
-            if (ZEIGE_VISUALISERUNG):
-                SimVisualisierung(schritt_pfad).run()
-            if (ZEIGE_STATISTIKEN):
-                statdrawer = StatDrawer()
-                statdrawer.visualisiere_aufkommen(csv_pfad, zeitstempel)
-                statdrawer.visualisiere_wartezeiten(csv_pfad, zeitstempel)
-                statdrawer.visualisiere_etagenanalyse(csv_pfad, zeitstempel)
-        finally:
-            sys.stdout = logger._konsole
+    if ZEIGE_VISUALISERUNG:
+        SimVisualisierung(schritt_pfad).run()
+    if ZEIGE_STATISTIKEN:
+        statdrawer = StatDrawer()
+        statdrawer.visualisiere_aufkommen(csv_pfad, zeitstempel)
+        statdrawer.visualisiere_wartezeiten(csv_pfad, zeitstempel)
+        statdrawer.visualisiere_etagenanalyse(csv_pfad, zeitstempel)
 
 
 if __name__ == "__main__":
