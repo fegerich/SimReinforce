@@ -9,6 +9,7 @@ from etage import Etage
 from fahrgast import Fahrgast
 from aufzug import Aufzug
 from logger import Logger
+from Statistiken.StatDrawer import StatDrawer
 
 
 # Simulations Konfiguration
@@ -17,19 +18,19 @@ NUM_AUFZUEGE  = 3
 SPAWN_ENDE    = 36_000   # Sekunde ab der keine neuen Fahrgäste mehr spawnen
 FAHRT_ZEIT    = 5
 MAX_KAPAZITAET = 5       # Maximale Anzahl Fahrgäste pro Aufzug
-MAX_PATIENCE  = 60       # Sekunden bis ein Fahrgast die Treppe nimmt
-SEED          = 69
-
+MAX_PATIENCE  = 240       # Sekunden bis ein Fahrgast die Treppe nimmt
+SEED          = 17
+ZEIGE_STATISTIKEN = True
 random.seed(SEED)
 
 # Spawning Konfigurationen
-DEFAULT_SPAWN = (30.0, "Default", list(range(NUM_ETAGEN)), list(range(NUM_ETAGEN)))
+DEFAULT_SPAWN = (10.0, "Default", list(range(NUM_ETAGEN)), list(range(NUM_ETAGEN)))
 TAGESZEITEN = [
   # (start_zeit, end_zeit, spawn_rate, beschreibung, start_etagen, ziel_etagen)
-    (0,      3_600,  10.0, "Morgens",             [0],                    list(range(1, NUM_ETAGEN))),
-    (14_400, 15_600, 15.0, "Anfang Mittagspause", list(range(1, NUM_ETAGEN)), [0]),
-    (16_800, 18_000, 15.0, "Ende Mittagspause",   [0],                    list(range(1, NUM_ETAGEN))),
-    (32_400, 36_000, 10.0, "Feierabend",          list(range(1, NUM_ETAGEN)), [0]),
+    (0,      3_600,  4.5, "Morgens",             [0],                    list(range(1, NUM_ETAGEN))),
+    (14_400, 15_600, 6.0, "Anfang Mittagspause", list(range(1, NUM_ETAGEN)), [0]),
+    (16_800, 18_000, 5.0, "Ende Mittagspause",   [0],                    list(range(1, NUM_ETAGEN))),
+    (32_400, 36_000, 7.0, "Feierabend",          list(range(1, NUM_ETAGEN)), [0]),
 ]
 
 
@@ -130,7 +131,7 @@ def fahrgast_generator(env, etagen, aufzuege, abgeschlossene, sim_ende, schrittl
         env.process(fahrgast_prozess(env, fahrgast, etagen, aufzuege, abgeschlossene, sim_ende, schrittlogger))
         fahrgast_id += 1
 
-    print(f"\n  🚫 Spawning gestoppt bei t={env.now:.0f}s — warte auf {sim_ende._aktive} verbleibende Fahrgäste ...")
+    print(f"\n Spawning gestoppt bei t={env.now:.0f}s — warte auf {sim_ende._aktive} verbleibende Fahrgäste ...")
     sim_ende.spawning_beendet()
 
 
@@ -180,8 +181,14 @@ def main():
                         fg.ziel,
                         fg.nimmt_treppenhaus,
                     ])
+            print()
+            print(f"Simulation beendet bei t={env.now:.0f}s. Log: {log_pfad} | Fahrgäste: {csv_pfad} | Schritte: {schritt_pfad}")
 
-            print(f"\n✅ Simulation beendet bei t={env.now:.0f}s. Log: {log_pfad} | Fahrgäste: {csv_pfad} | Schritte: {schritt_pfad}")
+            if (ZEIGE_STATISTIKEN):
+                statdrawer = StatDrawer()
+                statdrawer.visualisiere_aufkommen(csv_pfad, zeitstempel)
+                statdrawer.visualisiere_wartezeiten(csv_pfad, zeitstempel)
+                statdrawer.visualisiere_etagenanalyse(csv_pfad, zeitstempel)
         finally:
             sys.stdout = logger._konsole
 
