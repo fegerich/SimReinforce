@@ -151,7 +151,7 @@ class StatDrawer:
                 ha="center", fontsize=10, color="#555555")
 
         plt.tight_layout(rect=[0, 0.04, 1, 0.97])
-        plt.savefig(f"Statistiken/Abbildungen/aufkommen_{zeitstempel}.png", dpi=150, bbox_inches="tight")
+        plt.savefig(f"Visualisierung/Abbildungen/aufkommen_{zeitstempel}.png", dpi=150, bbox_inches="tight")
         plt.show()
 
 
@@ -307,7 +307,7 @@ class StatDrawer:
         fig.text(0.5, 0.01, zusammenfassung,
                 ha="center", fontsize=10, color="#555555")
 
-        plt.savefig(f"Statistiken/Abbildungen/wartezeiten_{zeitstempel}.png", dpi=150, bbox_inches="tight")
+        plt.savefig(f"Visualisierung/Abbildungen/wartezeiten_{zeitstempel}.png", dpi=150, bbox_inches="tight")
         plt.show()
 
     def visualisiere_etagenanalyse(self, csv_pfad: str, zeitstempel: str):
@@ -418,7 +418,7 @@ class StatDrawer:
         fig.text(0.5, 0.005, zusammenfassung,
                  ha="center", fontsize=10, color="#555")
 
-        plt.savefig(f"Statistiken/Abbildungen/etagenanalyse_{zeitstempel}.png", dpi=150, bbox_inches="tight")
+        plt.savefig(f"Visualisierung/Abbildungen/etagenanalyse_{zeitstempel}.png", dpi=150, bbox_inches="tight")
         plt.show()
 
 

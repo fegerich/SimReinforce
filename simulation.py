@@ -9,7 +9,7 @@ from etage import Etage
 from fahrgast import Fahrgast
 from aufzug import Aufzug
 from logger import Logger
-from Statistiken.StatDrawer import StatDrawer
+from Visualisierung.StatDrawer import StatDrawer
 
 
 # Simulations Konfiguration
