@@ -10,7 +10,7 @@ from fahrgast import Fahrgast
 from aufzug import Aufzug
 from logger import Logger
 from Visualisierung.StatDrawer import StatDrawer
-from visualisierung_v1 import SimVisualisierung
+from Visualisierung.visualisierung_v1 import SimVisualisierung
 
 
 # Simulations Konfiguration
@@ -31,7 +31,7 @@ DEFAULT_SPAWN = (10.0, "Default", list(range(NUM_ETAGEN)), list(range(NUM_ETAGEN
 TAGESZEITEN = [
   # (start_zeit, end_zeit, spawn_rate, beschreibung, start_etagen, ziel_etagen)
     (0,      3_600,  4.5, "Morgens",             [0],                    list(range(1, NUM_ETAGEN))),
-    (14_400, 15_600, 6.0, "Anfang Mittagspause", list(range(1, NUM_ETAGEN)), [0]),
+    (14_400, 15_600, 6.0, "Anfang Mittagspause", list(range(1, NUM_ETAGEN)), [0, 0, 2]),
     (16_800, 18_000, 5.0, "Ende Mittagspause",   [0],                    list(range(1, NUM_ETAGEN))),
     (32_400, 36_000, 7.0, "Feierabend",          list(range(1, NUM_ETAGEN)), [0]),
 ]
