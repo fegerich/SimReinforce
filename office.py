@@ -1,6 +1,7 @@
 import numpy as np
 import random
 from fahrgast import Fahrgast
+from tageszeit import Tageszeit
 
 
 class Office:
@@ -40,10 +41,10 @@ class Office:
 
     # ── Tageszeit ─────────────────────────────────────────────────────────────
 
-    def _get_tageszeit(self, now):
-        for start, ende, rate, name, starts, ziele in self.tageszeiten:
-            if start <= now < ende:
-                return rate, name, starts, ziele
+    def _get_tageszeit(self, now) -> Tageszeit:
+        for tz in self.tageszeiten:
+            if tz.start <= now < tz.ende:
+                return tz
         return self.default_spawn
 
     # ── Prozesse ──────────────────────────────────────────────────────────────
@@ -87,18 +88,18 @@ class Office:
         fahrgast_id = 0
 
         while True:
-            rate, _, mögliche_starts, mögliche_ziele = self._get_tageszeit(self.env.now)
+            tz = self._get_tageszeit(self.env.now)
 
-            wartezeit = np.random.exponential(rate)
+            wartezeit = np.random.exponential(tz.spawn_rate)
             yield self.env.timeout(max(1, wartezeit))
 
             if self.env.now >= self.spawn_ende:
                 break
 
-            start = random.choice(mögliche_starts)
-            ziel  = random.choice(mögliche_ziele)
+            start = random.choices(tz.start_etagen, weights=tz.start_gewichtung, k=1)[0]
+            ziel  = random.choices(tz.ziel_etagen,  weights=tz.ziel_gewichtung,  k=1)[0]
             while ziel == start:
-                ziel = random.choice(mögliche_ziele)
+                ziel = random.choices(tz.ziel_etagen, weights=tz.ziel_gewichtung, k=1)[0]
 
             fahrgast = Fahrgast(fahrgast_id, start, ziel, max_patience=self.max_patience)
             self.fahrgast_gestartet()
