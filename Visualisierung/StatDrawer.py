@@ -229,9 +229,9 @@ class StatDrawer:
                         linestyle="--", label="Gleitender Ø (5 min. Fenster)", zorder=4)
 
         # Gesamtdurchschnitt als Linie
-        gesamt_avg = wartezeit_aufzug.mean()
-        ax_zeit.axhline(gesamt_avg, color="#E05C5C", linewidth=1.5,
-                        linestyle=":", label=f"Gesamtdurchschnitt: {gesamt_avg:.1f}s", zorder=4)
+        gesamt_avg_alle = np.concatenate([wartezeit_aufzug, wartezeit_treppe]).mean()
+        ax_zeit.axhline(gesamt_avg_alle, color="#E05C5C", linewidth=1.5,
+                        linestyle=":", label=f"Gesamtdurchschnitt (inkl. Treppe): {gesamt_avg_alle:.1f}s", zorder=4)
 
         ax_zeit.set_ylabel("Ø Wartezeit (Sekunden)", fontsize=11)
         ax_zeit.set_xlabel("Uhrzeit", fontsize=11)
@@ -252,8 +252,8 @@ class StatDrawer:
                     color="#E05C5C", alpha=0.75, edgecolor="white", zorder=3,
                     label=f"Treppenhaus ({max_wartezeit}s)")
 
-        ax_hist.axvline(gesamt_avg, color="#F5A623", linewidth=2,
-                        linestyle="--", label=f"Ø {gesamt_avg:.1f}s")
+        ax_hist.axvline(gesamt_avg_alle, color="#F5A623", linewidth=2,
+                        linestyle="--", label=f"Ø gesamt (inkl. Treppe): {gesamt_avg_alle:.1f}s")
         ax_hist.set_xlabel("Wartezeit (Sekunden)", fontsize=11)
         ax_hist.set_ylabel("Anzahl Fahrgäste", fontsize=11)
         ax_hist.set_title("Verteilung der Wartezeiten", fontsize=12)
@@ -297,7 +297,7 @@ class StatDrawer:
         # ── Zusammenfassung ───────────────────────────────────────────────────────
         zusammenfassung = (
             f"Aufzug: {len(aufzug_rows)} Fahrgäste  |  "
-            f"Ø Wartezeit: {gesamt_avg:.1f}s  |  "
+            f"Ø gesamt (inkl. Treppe): {gesamt_avg_alle:.1f}s  |  "
             f"Min: {wartezeit_aufzug.min():.0f}s  |  "
             f"Max: {wartezeit_aufzug.max():.0f}s  |  "
             f"Treppenhaus: {len(treppenhaus_rows)} Fahrgäste (immer {max_wartezeit}s)"
@@ -320,11 +320,13 @@ class StatDrawer:
         with open(csv_pfad, newline="") as f:
             rows = list(csv.DictReader(f))
 
-        aufzug_rows = [r for r in rows if r["Nimmt_Treppenhaus"] == "False"]
+        aufzug_rows     = [r for r in rows if r["Nimmt_Treppenhaus"] == "False"]
+        treppenhaus_rows = [r for r in rows if r["Nimmt_Treppenhaus"] == "True"]
 
         startetagen  = np.array([int(r["Startetage"])   for r in aufzug_rows])
         zieletagen   = np.array([int(r["Zieletage"])    for r in aufzug_rows])
         wartezeiten  = np.array([float(r["Wartezeit"])  for r in aufzug_rows])
+        wartezeiten_treppe = np.array([float(r["Wartezeit"]) for r in treppenhaus_rows])
         alle_etagen  = sorted(set(startetagen) | set(zieletagen))
         num_etagen   = len(alle_etagen)
 
@@ -394,9 +396,9 @@ class StatDrawer:
             ax_warte.text(val + 0.3, bar.get_y() + bar.get_height() / 2,
                           f"{val:.1f}s", va="center", fontsize=8)
 
-        gesamt_avg = wartezeiten.mean()
+        gesamt_avg = np.concatenate([wartezeiten, wartezeiten_treppe]).mean()
         ax_warte.axvline(gesamt_avg, color="#333", linewidth=1.5,
-                         linestyle=":", label=f"Gesamt-Ø: {gesamt_avg:.1f}s")
+                         linestyle=":", label=f"Gesamt-Ø (inkl. Treppe): {gesamt_avg:.1f}s")
         ax_warte.set_xlabel("Ø Wartezeit (Sekunden)", fontsize=10)
         ax_warte.set_title("Ø Wartezeit pro Startetage\n(± Standardabweichung)",
                            fontsize=12, fontweight="bold")
