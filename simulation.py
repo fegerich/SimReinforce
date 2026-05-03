@@ -7,6 +7,7 @@ from etage import Etage
 from aufzug import Aufzug
 from logger import Logger
 from office import Office
+from tageszeit import Tageszeit
 from Visualisierung.StatDrawer import StatDrawer
 from Visualisierung.visualisierung_v1 import SimVisualisierung
 
@@ -23,14 +24,58 @@ SEED           = 17
 ZEIGE_VISUALISERUNG = False
 ZEIGE_STATISTIKEN   = True
 
-# Spawning Konfigurationen
-DEFAULT_SPAWN = (10.0, "Default", list(range(NUM_ETAGEN)), list(range(NUM_ETAGEN)))
+# Spawning Konfigurationen — Gewichte: Liste (z.B. [70, 30]) oder None für Gleichverteilung
+DEFAULT_SPAWN = Tageszeit(
+    start        = 0,
+    ende         = 0,
+    spawn_rate   = 10.0,
+    beschreibung = "Default",
+    start_etagen = list(range(NUM_ETAGEN)),
+    start_gewichtung    = None,
+    ziel_etagen  = list(range(NUM_ETAGEN)),
+    ziel_gewichtung     = None,
+)
 TAGESZEITEN = [
-  # (start_zeit, end_zeit, spawn_rate, beschreibung, start_etagen, ziel_etagen)
-    (0,      3_600,  4.5, "Morgens",             [0],                        list(range(1, NUM_ETAGEN))),
-    (14_400, 15_600, 6.0, "Anfang Mittagspause", list(range(1, NUM_ETAGEN)), [0, 0, 2]),
-    (16_800, 18_000, 5.0, "Ende Mittagspause",   [0],                        list(range(1, NUM_ETAGEN))),
-    (32_400, 36_000, 7.0, "Feierabend",          list(range(1, NUM_ETAGEN)), [0]),
+    Tageszeit(
+        start            = 0,
+        ende             = 3_600,
+        spawn_rate       = 4.5,
+        beschreibung     = "Morgens",
+        start_etagen     = [0],
+        start_gewichtung = None,
+        ziel_etagen      = list(range(1, NUM_ETAGEN)),
+        ziel_gewichtung  = None,
+    ),
+    Tageszeit(
+        start            = 14_400,
+        ende             = 15_600,
+        spawn_rate       = 6.0,
+        beschreibung     = "Anfang Mittagspause",
+        start_etagen     = list(range(1, NUM_ETAGEN)),
+        start_gewichtung = None,
+        ziel_etagen      = [0, 2],
+        ziel_gewichtung  = [0.7, 0.3],
+    ),
+    Tageszeit(
+        start            = 16_800,
+        ende             = 18_000,
+        spawn_rate       = 5.0,
+        beschreibung     = "Ende Mittagspause",
+        start_etagen     = [0, 2],
+        start_gewichtung = [0.7, 0.3],
+        ziel_etagen      = list(range(1, NUM_ETAGEN)),
+        ziel_gewichtung  = None,
+    ),
+    Tageszeit(
+        start            = 32_400,
+        ende             = 36_000,
+        spawn_rate       = 4.0,
+        beschreibung     = "Feierabend",
+        start_etagen     = list(range(1, NUM_ETAGEN)),
+        start_gewichtung = None,
+        ziel_etagen      = [0, random.randint(1, 9)],
+        ziel_gewichtung  = [0.95, 0.5],
+    ),
 ]
 
 
