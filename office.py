@@ -4,25 +4,49 @@ from fahrgast import Fahrgast
 
 
 class Office:
-    def __init__(self, env, etagen, aufzuege, abgeschlossene, sim_ende,
+    def __init__(self, env, etagen, aufzuege, abgeschlossene,
                  spawn_ende, max_patience, tageszeiten, default_spawn,
                  schrittlogger=None):
         self.env            = env
         self.etagen         = etagen
         self.aufzuege       = aufzuege
         self.abgeschlossene = abgeschlossene
-        self.sim_ende       = sim_ende
         self.spawn_ende     = spawn_ende
         self.max_patience   = max_patience
         self.tageszeiten    = tageszeiten
         self.default_spawn  = default_spawn
         self.schrittlogger  = schrittlogger
 
+        self._aktive        = 0
+        self._spawn_fertig  = False
+        self.fertig         = env.event()
+
+    # ── SimEnde-Logik ─────────────────────────────────────────────────────────
+
+    def fahrgast_gestartet(self):
+        self._aktive += 1
+
+    def fahrgast_abgeschlossen(self):
+        self._aktive -= 1
+        self._pruefen()
+
+    def spawning_beendet(self):
+        self._spawn_fertig = True
+        self._pruefen()
+
+    def _pruefen(self):
+        if self._spawn_fertig and self._aktive == 0 and not self.fertig.triggered:
+            self.fertig.succeed()
+
+    # ── Tageszeit ─────────────────────────────────────────────────────────────
+
     def _get_tageszeit(self, now):
         for start, ende, rate, name, starts, ziele in self.tageszeiten:
             if start <= now < ende:
                 return rate, name, starts, ziele
         return self.default_spawn
+
+    # ── Prozesse ──────────────────────────────────────────────────────────────
 
     def fahrgast_prozess(self, fahrgast):
         etage              = self.etagen[fahrgast.start]
@@ -48,7 +72,7 @@ class Office:
             if self.schrittlogger:
                 self.schrittlogger.fahrgast_treppenhaus(self.env.now, fahrgast)
             self.abgeschlossene.append(fahrgast)
-            self.sim_ende.fahrgast_abgeschlossen()
+            self.fahrgast_abgeschlossen()
             return
 
         fahrgast.einsteigzeit = self.env.now
@@ -57,7 +81,7 @@ class Office:
         yield fahrgast.angekommen
         fahrgast.ankunftszeit = self.env.now
         self.abgeschlossene.append(fahrgast)
-        self.sim_ende.fahrgast_abgeschlossen()
+        self.fahrgast_abgeschlossen()
 
     def fahrgast_generator(self):
         fahrgast_id = 0
@@ -77,8 +101,8 @@ class Office:
                 ziel = random.choice(mögliche_ziele)
 
             fahrgast = Fahrgast(fahrgast_id, start, ziel, max_patience=self.max_patience)
-            self.sim_ende.fahrgast_gestartet()
+            self.fahrgast_gestartet()
             self.env.process(self.fahrgast_prozess(fahrgast))
             fahrgast_id += 1
 
-        self.sim_ende.spawning_beendet()
+        self.spawning_beendet()

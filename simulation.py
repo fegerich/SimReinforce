@@ -34,32 +34,6 @@ TAGESZEITEN = [
 ]
 
 
-class SimEnde:
-    """Feuert ein SimPy-Event sobald das Spawnen gestoppt wurde
-    und alle Fahrgäste ihr Ziel erreicht oder die Treppe genommen haben."""
-
-    def __init__(self, env):
-        self._env          = env
-        self._aktive       = 0
-        self._spawn_fertig = False
-        self.fertig        = env.event()
-
-    def fahrgast_gestartet(self):
-        self._aktive += 1
-
-    def fahrgast_abgeschlossen(self):
-        self._aktive -= 1
-        self._pruefen()
-
-    def spawning_beendet(self):
-        self._spawn_fertig = True
-        self._pruefen()
-
-    def _pruefen(self):
-        if self._spawn_fertig and self._aktive == 0 and not self.fertig.triggered:
-            self.fertig.succeed()
-
-
 # Simulation starten
 def main():
     random.seed(SEED)
@@ -82,12 +56,11 @@ def main():
         env.process(a.run())
 
     abgeschlossene = []
-    sim_ende       = SimEnde(env)
-    office         = Office(env, etagen, aufzuege, abgeschlossene, sim_ende,
+    office         = Office(env, etagen, aufzuege, abgeschlossene,
                             SPAWN_ENDE, MAX_PATIENCE, TAGESZEITEN, DEFAULT_SPAWN, logger)
     env.process(office.fahrgast_generator())
 
-    env.run(until=sim_ende.fertig)
+    env.run(until=office.fertig)
     logger.schliessen()
 
     csv_pfad = os.path.join("output", f"fahrgaeste_{zeitstempel}.csv")
