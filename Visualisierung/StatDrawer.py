@@ -496,7 +496,7 @@ class StatDrawer:
             fahrten_hoch   = sum(1 for z in zustand if z == "FAHREND_HOCH")
             fahrten_runter = sum(1 for z in zustand if z == "FAHREND_RUNTER")
             wartezeit_n    = sum(1 for z in zustand if z == "WARTEND")
-            ax.set_title(f"▲ {fahrten_hoch}×  ▼ {fahrten_runter}×  💤 {wartezeit_n}×",
+            ax.set_title(f"▲ {fahrten_hoch}×  ▼ {fahrten_runter}×  W {wartezeit_n}×",
                         fontsize=9, loc="right", pad=4, color="#555")
         
         # ── X-Achse ───────────────────────────────────────────────────────────────────
