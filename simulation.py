@@ -22,7 +22,7 @@ MAX_PATIENCE  = 240       # Sekunden bis ein Fahrgast die Treppe nimmt
 SEED          = 17
 
 ZEIGE_VISUALISERUNG = False
-ZEIGE_STATISTIKEN = False
+ZEIGE_STATISTIKEN = True
 random.seed(SEED)
 
 # Spawning Konfigurationen
@@ -196,8 +196,11 @@ def main():
     if ZEIGE_STATISTIKEN:
         statdrawer = StatDrawer()
         statdrawer.visualisiere_aufkommen(csv_pfad, zeitstempel)
-        statdrawer.visualisiere_wartezeiten(csv_pfad, zeitstempel)
+        statdrawer.visualisiere_wartezeiten(csv_pfad, zeitstempel, MAX_PATIENCE)
         statdrawer.visualisiere_etagenanalyse(csv_pfad, zeitstempel)
+        statdrawer.draw_aufzug_routen(schritt_pfad, zeitstempel)
+        statdrawer.draw_fahrstuhlauslastung(schritt_pfad, zeitstempel)
+
 
 
 if __name__ == "__main__":

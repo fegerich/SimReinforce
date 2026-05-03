@@ -1,11 +1,10 @@
 import csv
-import glob
-import os
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from collections import Counter
 import numpy as np
 import matplotlib.colors as mcolors
+from matplotlib.lines import Line2D
 
 # 0 Sekunden Simulationszeit entspricht dieser Uhrzeit
 SIM_START_STUNDE  = 8   # 08:00 Uhr
@@ -155,7 +154,7 @@ class StatDrawer:
         plt.show()
 
 
-    def visualisiere_wartezeiten(self, csv_pfad: str, zeitstempel: str, intervall_sekunden: int = 300):
+    def visualisiere_wartezeiten(self, csv_pfad: str, zeitstempel: str, max_wartezeit, intervall_sekunden: int = 300):
         """
         Visualisiert die durchschnittliche Wartezeit der Fahrgäste in drei Ansichten:
         1. Durchschnittliche Wartezeit über die Tageszeit
@@ -227,7 +226,7 @@ class StatDrawer:
             gleitend = np.convolve(avg_wartezeit, np.ones(5) / 5, mode="same")
             ax_zeit.plot(bin_mitte, gleitend,
                         color="#F5A623", linewidth=2.5,
-                        linestyle="--", label="Gleitender Ø (5 Fenster)", zorder=4)
+                        linestyle="--", label="Gleitender Ø (5 min. Fenster)", zorder=4)
 
         # Gesamtdurchschnitt als Linie
         gesamt_avg = wartezeit_aufzug.mean()
@@ -245,13 +244,13 @@ class StatDrawer:
         ax_zeit.set_title("Durchschnittliche Wartezeit über die Tageszeit", fontsize=12)
 
         # ── 2. Histogramm der Wartezeiten ─────────────────────────────────────────
-        hist_bins = np.arange(0, 65, 5)  # 0–60s in 5s-Schritten
+        hist_bins = np.arange(0, max_wartezeit + 5, 5)  # 0 – MAX_Wartezeit  in 5s-Schritten
         ax_hist.hist(wartezeit_aufzug, bins=hist_bins,
                     color="#4A90D9", alpha=0.85, edgecolor="white", zorder=3,
                     label="Aufzug genutzt")
         ax_hist.hist(wartezeit_treppe, bins=hist_bins,
                     color="#E05C5C", alpha=0.75, edgecolor="white", zorder=3,
-                    label="Treppenhaus (60s)")
+                    label=f"Treppenhaus ({max_wartezeit}s)")
 
         ax_hist.axvline(gesamt_avg, color="#F5A623", linewidth=2,
                         linestyle="--", label=f"Ø {gesamt_avg:.1f}s")
@@ -296,18 +295,17 @@ class StatDrawer:
         ax_etage.grid(axis="y", linestyle="--", alpha=0.4, zorder=0)
 
         # ── Zusammenfassung ───────────────────────────────────────────────────────
-        median_wz = np.median(wartezeit_aufzug)
         zusammenfassung = (
             f"Aufzug: {len(aufzug_rows)} Fahrgäste  |  "
             f"Ø Wartezeit: {gesamt_avg:.1f}s  |  "
-            f"Median: {median_wz:.1f}s  |  "
+            f"Min: {wartezeit_aufzug.min():.0f}s  |  "
             f"Max: {wartezeit_aufzug.max():.0f}s  |  "
-            f"Treppenhaus: {len(treppenhaus_rows)} Fahrgäste (immer 60s)"
+            f"Treppenhaus: {len(treppenhaus_rows)} Fahrgäste (immer {max_wartezeit}s)"
         )
         fig.text(0.5, 0.01, zusammenfassung,
                 ha="center", fontsize=10, color="#555555")
 
-        plt.savefig(f"Visualisierung/Abbildungen/wartezeiten_{zeitstempel}.png", dpi=150, bbox_inches="tight")
+        plt.savefig(f"Visualisierung/Abbildungen/Wartezeiten_{zeitstempel}.png", dpi=150, bbox_inches="tight")
         plt.show()
 
     def visualisiere_etagenanalyse(self, csv_pfad: str, zeitstempel: str):
@@ -418,7 +416,162 @@ class StatDrawer:
         fig.text(0.5, 0.005, zusammenfassung,
                  ha="center", fontsize=10, color="#555")
 
-        plt.savefig(f"Visualisierung/Abbildungen/etagenanalyse_{zeitstempel}.png", dpi=150, bbox_inches="tight")
+        plt.savefig(f"Visualisierung/Abbildungen/Etagenanalyse_{zeitstempel}.png", dpi=150, bbox_inches="tight")
         plt.show()
+
+
+    def draw_aufzug_routen(self, csv_pfad, zeitstempel):
+        # Farben und Symbole pro Aufzug
+        AUFZUG_FARBEN = {"A": "#4A90D9", "B": "#E05C5C", "C": "#2ECC71"}
+        
+        with open(csv_pfad, newline="") as f:
+            rows = list(csv.DictReader(f))
+        
+        # Nur Aufzug-Zeilen mit Etageninfo
+        aufzug_rows = [r for r in rows if r["aufzug_id"] and r["aufzug_etage"]]
+        
+        # Pro Aufzug: Zeit, Etage, Zustand
+        aufzuege = {}
+        for aid in ["A", "B", "C"]:
+            gefiltert = [r for r in aufzug_rows if r["aufzug_id"] == aid]
+            aufzuege[aid] = {
+                "t":       np.array([float(r["t"])              for r in gefiltert]),
+                "etage":   np.array([int(r["aufzug_etage"])     for r in gefiltert]),
+                "zustand": [r["aufzug_zustand"]                 for r in gefiltert],
+                "fahrgaeste": np.array([int(r["aufzug_fahrgaeste"]) for r in gefiltert]),
+            }
+        
+        sim_end = max(d["t"].max() for d in aufzuege.values())
+        
+        # ── X-Achsen Ticks ────────────────────────────────────────────────────────────
+        tick_pos = np.arange(0, sim_end + 3600, 3600)
+        tick_lab = [self.sekunden_zu_uhrzeit(s) for s in tick_pos]
+        
+        # ── Plot ──────────────────────────────────────────────────────────────────────
+        fig, axes = plt.subplots(3, 1, figsize=(18, 12), sharex=True)
+        fig.suptitle("Fahrtrouten der Aufzüge über die Simulationszeit",
+                    fontsize=15, fontweight="bold", y=0.99)
+        
+        for idx, (aid, ax) in enumerate(zip(["A", "B", "C"], axes)):
+            data    = aufzuege[aid]
+            t       = data["t"]
+            etage   = data["etage"]
+            zustand = data["zustand"]
+            fahrgaeste = data["fahrgaeste"]
+            farbe   = AUFZUG_FARBEN[aid]
+        
+            # ── Fahrtlinie ────────────────────────────────────────────────────────────
+            ax.plot(t, etage,
+                    color=farbe, linewidth=1.5, zorder=2, alpha=0.9)
+        
+            # ── Fahrgastanzahl als Linienstärke-Variante: Punkte bei Stops ────────────
+            # Halte markieren (EINLADEN oder AUSSTEIGEN)
+            halt_maske = np.array([z in ("EINLADEN", "AUSSTEIGEN") for z in zustand])
+            if halt_maske.any():
+                ax.scatter(t[halt_maske], etage[halt_maske],
+                        s=fahrgaeste[halt_maske] * 12 + 15,
+                        color=farbe, zorder=4, alpha=0.7,
+                        edgecolors="white", linewidths=0.5)
+        
+            # Wartend markieren
+            warte_maske = np.array([z == "WARTEND" for z in zustand])
+            if warte_maske.any():
+                ax.scatter(t[warte_maske], etage[warte_maske],
+                        s=20, color="#95A5A6", marker="s",
+                        zorder=3, alpha=0.5)
+        
+            # ── Achsen formatieren ────────────────────────────────────────────────────
+            ax.set_ylabel("Etage", fontsize=10)
+            ax.set_yticks(range(10))
+            ax.set_yticklabels([f"E{e}" for e in range(10)], fontsize=8)
+            ax.set_ylim(-0.5, 9.5)
+            ax.grid(axis="y", linestyle="--", alpha=0.3, zorder=1)
+            ax.grid(axis="x", linestyle=":", alpha=0.2, zorder=1)
+        
+            # Aufzug-Label links
+            ax.set_title(f"Aufzug {aid}", fontsize=12, fontweight="bold",
+                        loc="left", pad=4, color=farbe)
+        
+            # Statistik rechts
+            fahrten_hoch   = sum(1 for z in zustand if z == "FAHREND_HOCH")
+            fahrten_runter = sum(1 for z in zustand if z == "FAHREND_RUNTER")
+            wartezeit_n    = sum(1 for z in zustand if z == "WARTEND")
+            ax.set_title(f"▲ {fahrten_hoch}×  ▼ {fahrten_runter}×  💤 {wartezeit_n}×",
+                        fontsize=9, loc="right", pad=4, color="#555")
+        
+        # ── X-Achse ───────────────────────────────────────────────────────────────────
+        axes[-1].set_xlabel("Uhrzeit", fontsize=11)
+        axes[-1].set_xticks(tick_pos)
+        axes[-1].set_xticklabels(tick_lab, fontsize=9)
+        axes[-1].set_xlim(0, sim_end)
+        
+        # ── Legende ───────────────────────────────────────────────────────────────────
+        legende_elemente = [
+            Line2D([0], [0], marker="o", color="gray", markersize=8,
+                label="Halt (Größe = Fahrgäste im Aufzug)", linestyle="None"),
+        ]
+        fig.legend(handles=legende_elemente, loc="lower center",
+                ncol=6, fontsize=9, bbox_to_anchor=(0.5, -0.02),
+                frameon=True, framealpha=0.9)
+        
+        plt.tight_layout(rect=[0, 0.04, 1, 0.98])
+        plt.savefig(f"Visualisierung/Abbildungen/Fahrstuhlrouten_{zeitstempel}.png", dpi=150, bbox_inches="tight")
+        plt.show()
+
+
+    def draw_fahrstuhlauslastung(self, csv_pfad, zeitstempel):
+        MAX_KAPAZITAET   = 5
+        AUFZUG_FARBEN    = {"A": "#4A90D9", "B": "#E05C5C", "C": "#2ECC71"}
+        # ── Daten laden ───────────────────────────────────────────────────────────────
+        with open(csv_pfad, newline="") as f:
+            rows = list(csv.DictReader(f))
+        
+        aufzug_rows = [r for r in rows if r["aufzug_id"] and r["aufzug_etage"]]
+        
+        # ── Durchschnittliche Auslastung pro Aufzug berechnen ─────────────────────────
+        # Gewichteter Durchschnitt: Fahrgäste × Zeitdauer des Intervalls
+        auslastung = {}
+        for aid in ["A", "B", "C"]:
+            gefiltert = [r for r in aufzug_rows if r["aufzug_id"] == aid]
+            zeiten    = np.array([float(r["t"])                for r in gefiltert])
+            fahrgaeste = np.array([int(r["aufzug_fahrgaeste"]) for r in gefiltert])
+        
+            # Zeitdauer jedes Intervalls
+            dauern = np.diff(zeiten)
+        
+            # Gewichteter Durchschnitt (letzten Eintrag weglassen da keine Dauer bekannt)
+            auslastung[aid] = np.sum(fahrgaeste[:-1] * dauern) / zeiten[-1]
+        
+        # ── Plot ──────────────────────────────────────────────────────────────────────
+        fig, ax = plt.subplots(figsize=(10, 5))
+        
+        aufzug_ids = ["A", "B", "C"]
+        werte      = [auslastung[aid] for aid in aufzug_ids]
+        farben     = [AUFZUG_FARBEN[aid] for aid in aufzug_ids]
+        
+        bars = ax.bar(aufzug_ids, werte, color=farben, width=0.5, alpha=0.9, zorder=3)
+        
+        # Wert über jedem Balken
+        for bar, val in zip(bars, werte):
+            ax.text(bar.get_x() + bar.get_width() / 2,
+                    bar.get_height() + 0.02,
+                    f"{val:.6f}",
+                    ha="center", va="bottom", fontsize=10, color="#333")
+        
+        ax.set_xlabel("Fahrstuhl-ID", fontsize=11)
+        ax.set_ylabel("Fahrstuhlkapazität", fontsize=11)
+        ax.set_title("Durchschnittliche Fahrstuhlauslastung über alle Tageszeiten",
+                    fontsize=13)
+        ax.set_ylim(0, MAX_KAPAZITAET)
+        ax.set_yticks(range(MAX_KAPAZITAET + 1))
+        ax.grid(axis="y", linestyle="--", alpha=0.4, zorder=0)
+        ax.set_facecolor("#F0F2F5")
+        fig.patch.set_facecolor("#F0F2F5")
+        
+        plt.tight_layout()
+        plt.savefig(f"Visualisierung/Abbildungen/Fahrstuhlauslastung{zeitstempel}.png", dpi=150, bbox_inches="tight")
+        plt.show()
+
+
 
 
