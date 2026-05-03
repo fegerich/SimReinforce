@@ -3,11 +3,11 @@ import random
 import os
 import csv
 from datetime import datetime
-from etage import Etage
-from aufzug import Aufzug
-from logger import Logger
-from office import Office
-from tageszeit import Tageszeit
+from Model.etage import Etage
+from Model.aufzug import Aufzug
+from Visualisierung.logger import Logger
+from Model.office import Office
+from Model.tageszeit import Tageszeit
 from Visualisierung.StatDrawer import StatDrawer
 from Visualisierung.visualisierung_v1 import SimVisualisierung
 

@@ -1,7 +1,7 @@
 import numpy as np
 import random
-from fahrgast import Fahrgast
-from tageszeit import Tageszeit
+from Model.fahrgast import Fahrgast
+from Model.tageszeit import Tageszeit
 
 
 class Office:
