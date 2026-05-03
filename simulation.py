@@ -21,7 +21,7 @@ MAX_KAPAZITAET = 5        # Maximale Anzahl Fahrgäste pro Aufzug
 MAX_PATIENCE   = 240      # Sekunden bis ein Fahrgast die Treppe nimmt
 SEED           = 17
 
-ZEIGE_VISUALISERUNG = False
+ZEIGE_VISUALISERUNG = True
 ZEIGE_STATISTIKEN   = True
 
 # Spawning Konfigurationen — Gewichte: Liste (z.B. [70, 30]) oder None für Gleichverteilung
@@ -84,13 +84,13 @@ def main():
     random.seed(SEED)
 
     zeitstempel = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
-    os.makedirs("output", exist_ok=True)
+    os.makedirs("Output", exist_ok=True)
 
     env    = simpy.Environment()
     etagen = [Etage(env, i) for i in range(NUM_ETAGEN)]
 
     logger       = Logger()
-    schritt_pfad = os.path.join("output", f"schritte_{zeitstempel}.csv")
+    schritt_pfad = os.path.join("Output", f"schritte_{zeitstempel}.csv")
     logger.init_schritte(schritt_pfad, etagen)
 
     aufzuege = [
@@ -108,7 +108,7 @@ def main():
     env.run(until=office.fertig)
     logger.schliessen()
 
-    csv_pfad = os.path.join("output", f"fahrgaeste_{zeitstempel}.csv")
+    csv_pfad = os.path.join("Output", f"fahrgaeste_{zeitstempel}.csv")
     with open(csv_pfad, "w", newline="", encoding="utf-8") as csv_datei:
         writer = csv.writer(csv_datei)
         writer.writerow(["Fahrgast_ID", "Spawnzeit", "Einsteigzeit", "Austeigezeit", "Wartezeit", "Startetage", "Zieletage", "Nimmt_Treppenhaus"])
