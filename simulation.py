@@ -1,37 +1,35 @@
 import simpy
-import numpy as np
 import random
 import os
 import csv
 from datetime import datetime
 from etage import Etage
-from fahrgast import Fahrgast
 from aufzug import Aufzug
 from logger import Logger
+from office import Office
 from Visualisierung.StatDrawer import StatDrawer
 from Visualisierung.visualisierung_v1 import SimVisualisierung
 
 
 # Simulations Konfiguration
-NUM_ETAGEN    = 10
-NUM_AUFZUEGE  = 3
-SPAWN_ENDE    = 36_000   # Sekunde ab der keine neuen Fahrgäste mehr spawnen
-FAHRT_ZEIT    = 5
-MAX_KAPAZITAET = 5       # Maximale Anzahl Fahrgäste pro Aufzug
-MAX_PATIENCE  = 240       # Sekunden bis ein Fahrgast die Treppe nimmt
-SEED          = 17
+NUM_ETAGEN     = 10
+NUM_AUFZUEGE   = 3
+SPAWN_ENDE     = 36_000   # Sekunde ab der keine neuen Fahrgäste mehr spawnen
+FAHRT_ZEIT     = 5
+MAX_KAPAZITAET = 5        # Maximale Anzahl Fahrgäste pro Aufzug
+MAX_PATIENCE   = 240      # Sekunden bis ein Fahrgast die Treppe nimmt
+SEED           = 17
 
 ZEIGE_VISUALISERUNG = False
-ZEIGE_STATISTIKEN = True
-random.seed(SEED)
+ZEIGE_STATISTIKEN   = True
 
 # Spawning Konfigurationen
 DEFAULT_SPAWN = (10.0, "Default", list(range(NUM_ETAGEN)), list(range(NUM_ETAGEN)))
 TAGESZEITEN = [
   # (start_zeit, end_zeit, spawn_rate, beschreibung, start_etagen, ziel_etagen)
-    (0,      3_600,  4.5, "Morgens",             [0],                    list(range(1, NUM_ETAGEN))),
+    (0,      3_600,  4.5, "Morgens",             [0],                        list(range(1, NUM_ETAGEN))),
     (14_400, 15_600, 6.0, "Anfang Mittagspause", list(range(1, NUM_ETAGEN)), [0, 0, 2]),
-    (16_800, 18_000, 5.0, "Ende Mittagspause",   [0],                    list(range(1, NUM_ETAGEN))),
+    (16_800, 18_000, 5.0, "Ende Mittagspause",   [0],                        list(range(1, NUM_ETAGEN))),
     (32_400, 36_000, 7.0, "Feierabend",          list(range(1, NUM_ETAGEN)), [0]),
 ]
 
@@ -62,77 +60,10 @@ class SimEnde:
             self.fertig.succeed()
 
 
-# Prozesse
-def fahrgast_prozess(env, fahrgast, etagen, aufzuege, abgeschlossene, sim_ende, schrittlogger=None):
-    etage              = etagen[fahrgast.start]
-    fahrgast.spawnzeit = env.now
-    store              = etage.store_up if fahrgast.ziel > fahrgast.start else etage.store_down
-
-    yield store.put(fahrgast)
-    if schrittlogger:
-        schrittlogger.fahrgast_spawn(env.now, fahrgast)
-
-    for a in aufzuege:
-        a.aufwecken()
-
-    fahrgast.abgeholt = env.event()
-    yield fahrgast.abgeholt | env.timeout(fahrgast.max_patience)
-
-    if not fahrgast.abgeholt.triggered:
-        # Geduld abgelaufen → Treppenhaus
-        fahrgast.nimmt_treppenhaus = True
-        fahrgast.wartezeit         = env.now - fahrgast.spawnzeit
-        if fahrgast in store.items:
-            store.items.remove(fahrgast)
-        if schrittlogger:
-            schrittlogger.fahrgast_treppenhaus(env.now, fahrgast)
-        abgeschlossene.append(fahrgast)
-        sim_ende.fahrgast_abgeschlossen()
-        return
-
-    fahrgast.einsteigzeit = env.now
-    fahrgast.wartezeit    = fahrgast.einsteigzeit - fahrgast.spawnzeit
-
-    yield fahrgast.angekommen
-    fahrgast.ankunftszeit = env.now
-    abgeschlossene.append(fahrgast)
-    sim_ende.fahrgast_abgeschlossen()
-
-
-def get_tageszeit(now):
-    for start, ende, rate, name, starts, ziele in TAGESZEITEN:
-        if start <= now < ende:
-            return rate, name, starts, ziele
-    return DEFAULT_SPAWN
-
-
-def fahrgast_generator(env, etagen, aufzuege, abgeschlossene, sim_ende, schrittlogger=None):
-    fahrgast_id = 0
-
-    while True:
-        rate, _, mögliche_starts, mögliche_ziele = get_tageszeit(env.now)
-
-        wartezeit = np.random.exponential(rate)
-        yield env.timeout(max(1, wartezeit))
-
-        if env.now >= SPAWN_ENDE:
-            break
-
-        start = random.choice(mögliche_starts)
-        ziel  = random.choice(mögliche_ziele)
-        while ziel == start:
-            ziel = random.choice(mögliche_ziele)
-
-        fahrgast = Fahrgast(fahrgast_id, start, ziel, max_patience=MAX_PATIENCE)
-        sim_ende.fahrgast_gestartet()
-        env.process(fahrgast_prozess(env, fahrgast, etagen, aufzuege, abgeschlossene, sim_ende, schrittlogger))
-        fahrgast_id += 1
-
-    sim_ende.spawning_beendet()
-
-
 # Simulation starten
 def main():
+    random.seed(SEED)
+
     zeitstempel = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
     os.makedirs("output", exist_ok=True)
 
@@ -152,7 +83,9 @@ def main():
 
     abgeschlossene = []
     sim_ende       = SimEnde(env)
-    env.process(fahrgast_generator(env, etagen, aufzuege, abgeschlossene, sim_ende, logger))
+    office         = Office(env, etagen, aufzuege, abgeschlossene, sim_ende,
+                            SPAWN_ENDE, MAX_PATIENCE, TAGESZEITEN, DEFAULT_SPAWN, logger)
+    env.process(office.fahrgast_generator())
 
     env.run(until=sim_ende.fertig)
     logger.schliessen()
@@ -173,14 +106,14 @@ def main():
                 fg.nimmt_treppenhaus,
             ])
 
-    end_sek = env.now
-    end_uhrzeit = f"{8 + end_sek // 3600:02.0f}:{(end_sek % 3600) // 60:02.0f}:{end_sek % 60:02.0f}"
+    end_sek  = env.now
+    end_uhr  = f"{8 + end_sek // 3600:02.0f}:{(end_sek % 3600) // 60:02.0f}:{end_sek % 60:02.0f}"
 
-    total_fahrgäste            = len(abgeschlossene)
-    angekommen        = sum(1 for fg in abgeschlossene if not fg.nimmt_treppenhaus)
-    treppenhaus       = sum(1 for fg in abgeschlossene if fg.nimmt_treppenhaus)
-    anteil_treppenhaus = round((treppenhaus / total_fahrgäste) * 100, 2)
-    avg_wartezeit     = sum(fg.wartezeit for fg in abgeschlossene) / total_fahrgäste if total_fahrgäste > 0 else 0
+    total_fahrgäste    = len(abgeschlossene)
+    angekommen         = sum(1 for fg in abgeschlossene if not fg.nimmt_treppenhaus)
+    treppenhaus        = sum(1 for fg in abgeschlossene if fg.nimmt_treppenhaus)
+    anteil_treppenhaus = round((treppenhaus / total_fahrgäste) * 100, 2) if total_fahrgäste > 0 else 0
+    avg_wartezeit      = sum(fg.wartezeit for fg in abgeschlossene) / total_fahrgäste if total_fahrgäste > 0 else 0
 
     print()
     print("-" * 12, "Simulation gestartet um 08:00:00", "-" * 12)
@@ -189,7 +122,7 @@ def main():
     print(f"Treppenhaus genommen:           {treppenhaus}")
     print(f"Anteil Treppenhaus:             {anteil_treppenhaus}%")
     print(f"Durchschnittliche Wartezeit:    {avg_wartezeit:.1f}s")
-    print("-" * 12, f"Simulation beendet um {end_uhrzeit}", "-" * 12)
+    print("-" * 12, f"Simulation beendet um {end_uhr}", "-" * 12)
 
     if ZEIGE_VISUALISERUNG:
         SimVisualisierung(schritt_pfad).run()
@@ -200,7 +133,6 @@ def main():
         statdrawer.visualisiere_etagenanalyse(csv_pfad, zeitstempel)
         statdrawer.draw_aufzug_routen(schritt_pfad, zeitstempel)
         statdrawer.draw_fahrstuhlauslastung(schritt_pfad, zeitstempel)
-
 
 
 if __name__ == "__main__":
