@@ -2,7 +2,7 @@ import pygame
 import csv
 import copy
 
-# ── Farben ────────────────────────────────────────────────────────────────────
+# Farben 
 HG             = (28,  30,  45)
 PANEL_BG       = (40,  42,  62)
 ETAGE_GERADE   = (42,  44,  64)
@@ -45,6 +45,11 @@ GESCHWINDIGKEITEN = [1, 5, 10, 30, 60, 120]
 
 
 class Animator:
+    """
+    Pygame-basierte Schritt-Visualisierung der Simulation.
+    Liest die Schritte-CSV und baut daraus einen vollständigen Zustandsverlauf auf,
+    der dann als interaktive Animation abgespielt werden kann.
+    """
     BREITE = 1100
     HOEHE  = 820
 
@@ -58,7 +63,7 @@ class Animator:
 
         pygame.init()
         self._screen = pygame.display.set_mode((self.BREITE, self.HOEHE))
-        pygame.display.set_caption("SimReinforce – Schritt-Visualisierung v2")
+        pygame.display.set_caption("Fahrstuhlsimualtion - Visualisierung")
         self._clock  = pygame.time.Clock()
         self._font_s      = pygame.font.SysFont("Consolas", 13)
         self._font_s_bold = pygame.font.SysFont("Consolas", 13, bold=True)
@@ -79,9 +84,15 @@ class Animator:
         self._pan_h  = self.HOEHE - TITEL_H - CTRL_H - 5
         self._ctrl_y = self.HOEHE - CTRL_H
 
-    # ── CSV laden & Zustände aufbauen ─────────────────────────────────────────
+    # CSV laden & Zustände aufbauen
 
     def _lade_und_baue(self, pfad):
+        """
+        Liest die Schritte-CSV und rekonstruiert daraus den vollständigen Zustandsverlauf.
+        Für jeden Eintrag wird ein Snapshot erstellt der den Zustand aller Aufzüge,
+        Wartenden pro Etage und Treppenhaus-Zähler zum jeweiligen Zeitpunkt enthält.
+        pax_ziele wird durch EINGESTIEGEN (append) und ANGEKOMMEN (remove) rekonstruiert.
+        """
         with open(pfad, newline="", encoding="utf-8") as f:
             zeilen = list(csv.DictReader(f))
 
@@ -153,9 +164,10 @@ class Animator:
 
         return schritte
 
-    # ── Hauptschleife ─────────────────────────────────────────────────────────
+    # Hauptschleife 
 
     def run(self):
+        """Startet die pygame-Hauptschleife. Läuft bis das Fenster geschlossen wird."""
         while True:
             dt = self._clock.tick(60) / 1000.0
 
@@ -183,6 +195,7 @@ class Animator:
             pygame.display.flip()
 
     def _taste(self, key):
+        """Verarbeitet Tastatureingaben für Navigation und Geschwindigkeitssteuerung."""
         if key == pygame.K_SPACE:
             self._play = not self._play
             self._acc  = 0.0
@@ -200,6 +213,7 @@ class Animator:
             self._index = len(self._schritte) - 1
 
     def _klick(self, pos):
+        """Springt beim Klick auf die Zeitleiste zum entsprechenden Schritt."""
         mx, my = pos
         bar_y = self._ctrl_y + 10
         if bar_y - 4 <= my <= bar_y + 18 and 10 <= mx <= self.BREITE - 10:
@@ -207,7 +221,7 @@ class Animator:
             self._index = max(0, min(int(ratio * (len(self._schritte) - 1)),
                                      len(self._schritte) - 1))
 
-    # ── Zeichnen ──────────────────────────────────────────────────────────────
+    # Zeichnen 
 
     def _zeichne(self):
         self._screen.fill(HG)
@@ -326,6 +340,7 @@ class Animator:
                          (bx, y0, bw, n * etage_h), width=1)
 
     def _get_tageszeit_name(self, t):
+        """Gibt den Beschreibungstext der aktiven Tageszeit für den Zeitpunkt t zurück."""
         for tz in self._tageszeiten:
             if tz.start <= t < tz.ende:
                 return tz.beschreibung
@@ -453,10 +468,11 @@ class Animator:
             self._txt(f"{self._uhrzeit(s['t'])} / {self._uhrzeit(t_end)}",
                       bw - 270, y + 28, self._font_m, GRAU)
 
-    # ── Hilfsmethoden ─────────────────────────────────────────────────────────
+    # Hilfsmethoden 
 
     @staticmethod
     def _uhrzeit(sekunden, start_stunde=8):
+        """Rechnet Simulationssekunden in eine Uhrzeit-Zeichenkette um (HH:MM:SS)."""
         gesamt_sek = int(start_stunde * 3600 + sekunden)
         h = (gesamt_sek // 3600) % 24
         m = (gesamt_sek % 3600) // 60
@@ -464,6 +480,7 @@ class Animator:
         return f"{h:02d}:{m:02d}:{s:02d}"
 
     def _txt(self, text, x, y, font, farbe):
+        """Rendert einen Text an der angegebenen Position auf dem Screen."""
         self._screen.blit(font.render(str(text), True, farbe), (x, y))
 
     def _linie(self, px, y, pw):
