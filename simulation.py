@@ -4,9 +4,9 @@ import os
 from datetime import datetime
 from Model.etage import Etage
 from Model.aufzug import Aufzug
-from Visualisierung.logger import Logger
 from Model.buero import Buero
 from Model.tageszeit import Tageszeit
+from Visualisierung.logger import Logger
 from Visualisierung.plotter import Plottter
 from Visualisierung.animator import Animator
 
