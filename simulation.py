@@ -8,7 +8,7 @@ from Visualisierung.logger import Logger
 from Model.buero import Buero
 from Model.tageszeit import Tageszeit
 from Visualisierung.plotter import Plottter
-from Visualisierung.visualisierung_v2 import SimVisualisierung_v2
+from Visualisierung.animator import Animator
 
 
 # Simulations Konfiguration
@@ -129,7 +129,7 @@ def main():
     print("-" * 12, f"Simulation beendet um {end_uhr}", "-" * 12)
 
     if ZEIGE_VISUALISERUNG:
-        SimVisualisierung_v2(schritt_pfad, tageszeiten=TAGESZEITEN).run()
+        Animator(schritt_pfad, tageszeiten=TAGESZEITEN).run()
     if ZEIGE_STATISTIKEN:
         statdrawer = Plottter()
         statdrawer.visualisiere_aufkommen(csv_pfad, zeitstempel)

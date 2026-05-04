@@ -3,13 +3,13 @@ import csv
 import copy
 
 # ── Farben ────────────────────────────────────────────────────────────────────
-HG             = ( 28,  30,  45)
-PANEL_BG       = ( 40,  42,  62)
-ETAGE_GERADE   = ( 42,  44,  64)
-ETAGE_UNGERADE = ( 48,  50,  72)
-ETAGE_LINIE    = ( 65,  68,  95)
-SCHACHT_BG     = ( 52,  55,  78)
-GRAU_DUNKEL    = ( 55,  58,  82)
+HG             = (28,  30,  45)
+PANEL_BG       = (40,  42,  62)
+ETAGE_GERADE   = (42,  44,  64)
+ETAGE_UNGERADE = (48,  50,  72)
+ETAGE_LINIE    = (65,  68,  95)
+SCHACHT_BG     = (52,  55,  78)
+GRAU_DUNKEL    = (55,  58,  82)
 WEISS          = (240, 240, 248)
 GRAU_HELL      = (180, 182, 205)
 GRAU           = (110, 112, 138)
@@ -27,24 +27,24 @@ ZUSTAND_FARBE = {
 EREIGNIS_FARBE = {
     "FAHRGAST_SPAWN":        (140, 215, 140),
     "EINGESTIEGEN":          (225, 180,  40),
-    "ANGEKOMMEN":            ( 55, 180,  85),
+    "ANGEKOMMEN":            (55, 180,  85),
     "TREPPENHAUS":           (215,  75,  75),
-    "AUFZUG_FAHREND_HOCH":   ( 55, 180,  85),
-    "AUFZUG_FAHREND_RUNTER": ( 55, 115, 215),
-    "AUFZUG_WARTEND":        ( 85,  90, 130),
+    "AUFZUG_FAHREND_HOCH":   (55, 180,  85),
+    "AUFZUG_FAHREND_RUNTER": (55, 115, 215),
+    "AUFZUG_WARTEND":        (85,  90, 130),
 }
 
 ID_FARBE = {
     "A": (100, 180, 255),
     "B": (255, 155,  75),
     "C": (175, 115, 255),
-    "D": ( 75, 215, 175),
+    "D": (75, 215, 175),
 }
 
 GESCHWINDIGKEITEN = [1, 5, 10, 30, 60, 120]
 
 
-class SimVisualisierung_v2:
+class Animator:
     BREITE = 1100
     HOEHE  = 820
 
