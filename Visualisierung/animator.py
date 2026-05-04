@@ -315,7 +315,7 @@ class Animator:
                     self._txt(f"[{aid}]", sx + 8, ry + 7, self._font_s, WEISS)
                     if pax_ziele:
                         ziele_str = ",".join(str(z) for z in sorted(pax_ziele))
-                        self._txt(f"→{ziele_str}", sx + 8, ry + etage_h // 2 + 2,
+                        self._txt(f"{ziele_str}", sx + 8, ry + etage_h // 2 + 2,
                                   self._font_s, WEISS)
 
             # Wartende + Treppenhaus pro Etage
@@ -376,7 +376,7 @@ class Animator:
         cy += 28
 
         if s["fid"] is not None:
-            self._txt(f"F{s['fid']:03d}: E{s['f_etage']} → E{s['f_ziel']}",
+            self._txt(f"F{s['fid']:03d}: E{s['f_etage']} -> E{s['f_ziel']}",
                       px + 12, cy, self._font_m, GRAU_HELL)
             cy += 22
         if s["aid"]:
