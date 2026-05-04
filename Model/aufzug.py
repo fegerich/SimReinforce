@@ -98,9 +98,11 @@ class Aufzug:
                 yield self.env.timeout(self.halt_zeit)
 
             # ── EINLADEN (aktuelle Richtung) ──────────────────────────────
-            store = self.etagen[self.aktuelle_etage].store_up \
-                    if self.fahrtrichtung == "up" \
-                    else self.etagen[self.aktuelle_etage].store_down
+            store = (
+                self.etagen[self.aktuelle_etage].store_up
+                if self.fahrtrichtung == "up"
+                else self.etagen[self.aktuelle_etage].store_down
+            )
             yield from self._einladen(store)
 
             # ── WARTEND ──────────────────────────────────────────────────
@@ -115,9 +117,11 @@ class Aufzug:
                     self.warte_event.succeed()
                     yield self.warte_event
                 self.fahrtrichtung = self.bestimme_richtung()
-                store2 = self.etagen[self.aktuelle_etage].store_up \
-                         if self.fahrtrichtung == "up" \
-                         else self.etagen[self.aktuelle_etage].store_down
+                store2 = (
+                    self.etagen[self.aktuelle_etage].store_up
+                    if self.fahrtrichtung == "up"
+                    else self.etagen[self.aktuelle_etage].store_down
+                )
                 yield from self._einladen(store2)
 
             # ── FAHREND ──────────────────────────────────────────────────
