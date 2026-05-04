@@ -8,7 +8,7 @@ from matplotlib.lines import Line2D
 SIM_START_STUNDE  = 8   # 08:00 Uhr
 SIM_START_MINUTE  = 0
 
-class StatDrawer:
+class Plottter:
     """
     Erstellt statistische Auswertungsdiagramme aus den Simulations-CSV-Dateien.
     Jede Methode liest eine CSV-Datei, berechnet Kennzahlen und speichert

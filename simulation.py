@@ -7,7 +7,7 @@ from Model.aufzug import Aufzug
 from Visualisierung.logger import Logger
 from Model.buero import Office
 from Model.tageszeit import Tageszeit
-from Visualisierung.StatDrawer import StatDrawer
+from Visualisierung.plotter import Plottter
 from Visualisierung.visualisierung_v2 import SimVisualisierung_v2
 
 
@@ -131,7 +131,7 @@ def main():
     if ZEIGE_VISUALISERUNG:
         SimVisualisierung_v2(schritt_pfad, tageszeiten=TAGESZEITEN).run()
     if ZEIGE_STATISTIKEN:
-        statdrawer = StatDrawer()
+        statdrawer = Plottter()
         statdrawer.visualisiere_aufkommen(csv_pfad, zeitstempel)
         statdrawer.visualisiere_wartezeiten(csv_pfad, zeitstempel, MAX_PATIENCE)
         statdrawer.draw_aufzug_routen(schritt_pfad, zeitstempel)
