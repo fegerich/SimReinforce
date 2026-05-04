@@ -19,16 +19,22 @@ _SPALTEN = [
 
 class Logger:
     """
-    Schreibt jeden Simulationsschritt als Zeile in eine CSV-Datei (Schritte-Log).
-    Jedes Ereignis (Spawn, Einsteigen, Fahren, etc.) erzeugt eine Zeile mit dem
-    aktuellen Zustand des betroffenen Aufzugs und Fahrgasts sowie den globalen
-    Wartendenzahlen aller Etagen.
+    Zuständig für das Schreiben beider Ausgabe-CSV-Dateien der Simulation:
+
+    1. Schritte-CSV (schritte_*.csv):
+       Ereignisbasiertes Log das während der Simulation befüllt wird.
+       Jedes Ereignis (Spawn, Einsteigen, Fahren, etc.) erzeugt eine Zeile mit dem
+       aktuellen Zustand des Aufzugs und Fahrgasts sowie den globalen Wartendenzahlen.
+
+    2. Fahrgäste-CSV (fahrgaeste_*.csv):
+       Zusammenfassung aller Fahrgäste, einmalig nach Simulationsende geschrieben.
 
     Verwendung:
         logger = Logger()
-        logger.init_schritte(pfad, etagen)
-        ...
+        logger.init_schritte(schritt_pfad, etagen)
+        ...                                          # Simulation läuft
         logger.schliessen()
+        logger.schreibe_fahrgaeste(csv_pfad, abgeschlossene)
     """
 
     def __init__(self):
