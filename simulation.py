@@ -1,7 +1,6 @@
 import simpy
 import random
 import os
-import csv
 from datetime import datetime
 from Model.etage import Etage
 from Model.aufzug import Aufzug
@@ -110,20 +109,7 @@ def main():
     logger.schliessen()
 
     csv_pfad = os.path.join("Output", f"fahrgaeste_{zeitstempel}.csv")
-    with open(csv_pfad, "w", newline="", encoding="utf-8") as csv_datei:
-        writer = csv.writer(csv_datei)
-        writer.writerow(["Fahrgast_ID", "Spawnzeit", "Einsteigzeit", "Austeigezeit", "Wartezeit", "Startetage", "Zieletage", "Nimmt_Treppenhaus"])
-        for fg in abgeschlossene:
-            writer.writerow([
-                fg.id,
-                fg.spawnzeit,
-                fg.einsteigzeit if fg.einsteigzeit is not None else "",
-                fg.ankunftszeit if fg.ankunftszeit is not None else "",
-                fg.wartezeit,
-                fg.start,
-                fg.ziel,
-                fg.nimmt_treppenhaus,
-            ])
+    logger.schreibe_fahrgaeste(csv_pfad, abgeschlossene)
 
     end_sek  = env.now
     end_uhr  = f"{8 + end_sek // 3600:02.0f}:{(end_sek % 3600) // 60:02.0f}:{end_sek % 60:02.0f}"
