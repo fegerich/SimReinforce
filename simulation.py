@@ -8,7 +8,6 @@ from Visualisierung.logger import Logger
 from Model.buero import Office
 from Model.tageszeit import Tageszeit
 from Visualisierung.StatDrawer import StatDrawer
-from Visualisierung.visualisierung_v1 import SimVisualisierung
 from Visualisierung.visualisierung_v2 import SimVisualisierung_v2
 
 
@@ -130,7 +129,6 @@ def main():
     print("-" * 12, f"Simulation beendet um {end_uhr}", "-" * 12)
 
     if ZEIGE_VISUALISERUNG:
-        # SimVisualisierung(schritt_pfad).run()
         SimVisualisierung_v2(schritt_pfad, tageszeiten=TAGESZEITEN).run()
     if ZEIGE_STATISTIKEN:
         statdrawer = StatDrawer()
