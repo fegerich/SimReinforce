@@ -5,6 +5,16 @@ from Model.tageszeit import Tageszeit
 
 
 class Buero:
+    """
+    Koordiniert den gesamten Fahrgastbetrieb im Gebäude.
+    Erzeugt Fahrgäste, steuert deren Prozesse und erkennt das Simulationsende.
+
+    Verantwortlichkeiten:
+        - Fahrgäste zeitgesteuert spawnen (fahrgast_generator)
+        - Jeden Fahrgast durch seinen Lebenszyklus führen (fahrgast_prozess)
+        - Tageszeiten auswerten für Spawn-Rate und Etagen-Gewichtung
+        - Simulation beenden sobald alle Fahrgäste abgeschlossen sind
+    """
     def __init__(self, env, etagen, aufzuege, abgeschlossene,
                  spawn_ende, max_patience, tageszeiten, default_spawn,
                  schrittlogger=None):
