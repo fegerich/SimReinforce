@@ -17,11 +17,11 @@ ROT_HELL       = (215,  75,  75)
 ROT_DUNKEL     = (140,  45,  45)
 
 ZUSTAND_FARBE = {
-    "WARTEND":        ( 85,  90, 130),
+    "WARTEN":         (85,  90, 130),
     "EINLADEN":       (225, 180,  40),
-    "AUSSTEIGEN":     (225, 125,  40),
-    "FAHREND_HOCH":   ( 55, 180,  85),
-    "FAHREND_RUNTER": ( 55, 115, 215),
+    "AUSLADEN":     (225, 125,  40),
+    "FAHREND_HOCH":   (55, 180,  85),
+    "FAHREND_RUNTER": (55, 115, 215),
 }
 
 EREIGNIS_FARBE = {

@@ -1,7 +1,7 @@
 # Zustände
 WARTEN        = "WARTEN"
 EINLADEN       = "EINLADEN"
-AUSSTEIGEN     = "AUSSTEIGEN"
+AUSLADEN     = "AUSLADEN"
 FAHREND_HOCH   = "FAHREND_HOCH"
 FAHREND_RUNTER = "FAHREND_RUNTER"
 
@@ -89,7 +89,7 @@ class Aufzug:
             # ── AUSSTEIGEN ───────────────────────────────────────────────
             aussteiger = [f for f in self.im_aufzug if f.ziel == self.aktuelle_etage]
             if aussteiger:
-                self.zustand = AUSSTEIGEN
+                self.zustand = AUSLADEN
                 for fahrgast in aussteiger:
                     self.im_aufzug.remove(fahrgast)
                     fahrgast.angekommen.succeed()
