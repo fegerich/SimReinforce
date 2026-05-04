@@ -1,5 +1,5 @@
 # Zustände
-WARTEND        = "WARTEND"
+WARTEN        = "WARTEN"
 EINLADEN       = "EINLADEN"
 AUSSTEIGEN     = "AUSSTEIGEN"
 FAHREND_HOCH   = "FAHREND_HOCH"
@@ -20,7 +20,7 @@ class Aufzug:
         self.aktuelle_etage = 0
         self.fahrtrichtung  = "up"
         self.im_aufzug      = []
-        self.zustand        = WARTEND
+        self.zustand        = WARTEN
         self.warte_event    = env.event()
 
     def aufwecken(self):
@@ -107,7 +107,7 @@ class Aufzug:
 
             # ── WARTEND ──────────────────────────────────────────────────
             if not self.im_aufzug and not self.ziele_in_richtung():
-                self.zustand = WARTEND
+                self.zustand = WARTEN
                 if self.schrittlogger:
                     self.schrittlogger.aufzug_wartend(self.env.now, self)
                 self.warte_event = self.env.event()
