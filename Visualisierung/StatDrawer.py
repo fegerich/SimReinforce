@@ -223,10 +223,10 @@ class StatDrawer:
 
         # Gleitender Durchschnitt
         if len(avg_wartezeit) >= 5:
-            gleitend = np.convolve(avg_wartezeit, np.ones(5) / 5, mode="same")
+            gleitend = np.convolve(avg_wartezeit, np.ones(3) / 3, mode="same")
             ax_zeit.plot(bin_mitte, gleitend,
                         color="#F5A623", linewidth=2.5,
-                        linestyle="--", label="Gleitender Ø (5 min. Fenster)", zorder=4)
+                        linestyle="--", label="Gleitender Ø (3 Fenster)", zorder=4)
 
         # Gesamtdurchschnitt als Linie
         gesamt_avg_alle = np.concatenate([wartezeit_aufzug, wartezeit_treppe]).mean()
@@ -244,13 +244,12 @@ class StatDrawer:
         ax_zeit.set_title("Durchschnittliche Wartezeit über die Tageszeit", fontsize=12)
 
         # ── 2. Histogramm der Wartezeiten ─────────────────────────────────────────
-        hist_bins = np.arange(0, max_wartezeit + 5, 5)  # 0 – MAX_Wartezeit  in 5s-Schritten
+        alle_wartezeiten = np.concatenate([wartezeit_aufzug, wartezeit_treppe])
+        hist_max  = int(np.ceil(alle_wartezeiten.max() / 5) * 5)
+        hist_bins = np.arange(0, hist_max + 5, 5)
         ax_hist.hist(wartezeit_aufzug, bins=hist_bins,
                     color="#4A90D9", alpha=0.85, edgecolor="white", zorder=3,
                     label="Aufzug genutzt")
-        ax_hist.hist(wartezeit_treppe, bins=hist_bins,
-                    color="#E05C5C", alpha=0.75, edgecolor="white", zorder=3,
-                    label=f"Treppenhaus ({max_wartezeit}s)")
 
         ax_hist.axvline(gesamt_avg_alle, color="#F5A623", linewidth=2,
                         linestyle="--", label=f"Ø gesamt (inkl. Treppe): {gesamt_avg_alle:.1f}s")
@@ -346,7 +345,7 @@ class StatDrawer:
         # ── Plot ──────────────────────────────────────────────────────────────────
         fig = plt.figure(figsize=(18, 6))
         fig.suptitle("Etagenanalyse der Fahrstuhlsimulation",
-                     fontsize=16, fontweight="bold", y=1.02)
+                     fontsize=16, fontweight="bold", y=0.98)
 
         gs = fig.add_gridspec(1, 3, wspace=0.4)
         ax_start = fig.add_subplot(gs[0, 0])
@@ -418,6 +417,7 @@ class StatDrawer:
         fig.text(0.5, 0.005, zusammenfassung,
                  ha="center", fontsize=10, color="#555")
 
+        plt.tight_layout(rect=[0, 0.04, 1, 0.95])
         plt.savefig(f"Visualisierung/Abbildungen/Etagenanalyse_{zeitstempel}.png", dpi=150, bbox_inches="tight")
         plt.show()
 
