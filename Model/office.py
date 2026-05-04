@@ -77,10 +77,10 @@ class Office:
             return
 
         fahrgast.einsteigzeit = self.env.now
-        fahrgast.wartezeit    = fahrgast.einsteigzeit - fahrgast.spawnzeit
 
         yield fahrgast.angekommen
         fahrgast.ankunftszeit = self.env.now
+        fahrgast.wartezeit    = fahrgast.ankunftszeit - fahrgast.spawnzeit
         self.abgeschlossene.append(fahrgast)
         self.fahrgast_abgeschlossen()
 

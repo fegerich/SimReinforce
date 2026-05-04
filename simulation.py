@@ -23,14 +23,14 @@ MAX_PATIENCE   = 240      # Sekunden bis ein Fahrgast die Treppe nimmt
 SEED           = 17
 
 ZEIGE_VISUALISERUNG = True
-ZEIGE_STATISTIKEN   = False
+ZEIGE_STATISTIKEN   = True
 
 # Spawning Konfigurationen — Gewichte: Liste (z.B. [70, 30]) oder None für Gleichverteilung
 DEFAULT_SPAWN = Tageszeit(
     start        = 0,
     ende         = 0,
     spawn_rate   = 10.0,
-    beschreibung = "Default",
+    beschreibung = "Normalbetrieb",
     start_etagen = list(range(NUM_ETAGEN)),
     start_gewichtung    = None,
     ziel_etagen  = list(range(NUM_ETAGEN)),
@@ -41,7 +41,7 @@ TAGESZEITEN = [
         start            = 0,
         ende             = 3_600,
         spawn_rate       = 4.5,
-        beschreibung     = "Morgens",
+        beschreibung     = "Arbeitsbeginn",
         start_etagen     = [0],
         start_gewichtung = None,
         ziel_etagen      = list(range(1, NUM_ETAGEN)),
