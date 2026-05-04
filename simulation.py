@@ -5,7 +5,7 @@ from datetime import datetime
 from Model.etage import Etage
 from Model.aufzug import Aufzug
 from Visualisierung.logger import Logger
-from Model.buero import Office
+from Model.buero import Buero
 from Model.tageszeit import Tageszeit
 from Visualisierung.plotter import Plottter
 from Visualisierung.visualisierung_v2 import SimVisualisierung_v2
@@ -100,7 +100,7 @@ def main():
         env.process(a.run())
 
     abgeschlossene = []
-    office         = Office(env, etagen, aufzuege, abgeschlossene,
+    office         = Buero(env, etagen, aufzuege, abgeschlossene,
                             SPAWN_ENDE, MAX_PATIENCE, TAGESZEITEN, DEFAULT_SPAWN, logger)
     env.process(office.fahrgast_generator())
 

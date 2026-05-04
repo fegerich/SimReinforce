@@ -4,7 +4,7 @@ from Model.fahrgast import Fahrgast
 from Model.tageszeit import Tageszeit
 
 
-class Office:
+class Buero:
     def __init__(self, env, etagen, aufzuege, abgeschlossene,
                  spawn_ende, max_patience, tageszeiten, default_spawn,
                  schrittlogger=None):
