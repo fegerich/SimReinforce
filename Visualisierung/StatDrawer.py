@@ -9,6 +9,18 @@ SIM_START_STUNDE  = 8   # 08:00 Uhr
 SIM_START_MINUTE  = 0
 
 class StatDrawer:
+    """
+    Erstellt statistische Auswertungsdiagramme aus den Simulations-CSV-Dateien.
+    Jede Methode liest eine CSV-Datei, berechnet Kennzahlen und speichert
+    das Diagramm unter Visualisierung/Abbildungen/.
+
+    Methoden:
+        visualisiere_aufkommen      : Fahrgastaufkommen über die Tageszeit (fahrgaeste_*.csv)
+        visualisiere_wartezeiten    : Wartezeiten in drei Ansichten (fahrgaeste_*.csv)
+        draw_aufzug_routen          : Fahrtrouten der Aufzüge über die Zeit (schritte_*.csv)
+        draw_fahrstuhlauslastung    : Durchschnittliche Auslastung pro Aufzug (schritte_*.csv)
+    """
+
     def __init__(self):
         pass
 
@@ -30,7 +42,7 @@ class StatDrawer:
             intervall_sekunden : Breite der Zeitfenster in Sekunden (Standard: 300s = 5 min)
         """
 
-        # ── Daten laden ───────────────────────────────────────────────────────────
+        # Daten laden 
         with open(csv_pfad, newline="") as f:
             rows = list(csv.DictReader(f))
 
@@ -40,7 +52,7 @@ class StatDrawer:
         sim_start = spawns.min()
         sim_end   = spawns.max()
 
-        # ── Zeitfenster aufteilen ─────────────────────────────────────────────────
+        #  Zeitfenster aufteilen 
         bins      = np.arange(sim_start, sim_end + intervall_sekunden, intervall_sekunden)
         bin_mitte = (bins[:-1] + bins[1:]) / 2  # Mittelpunkt jedes Fensters in Sekunden
 
@@ -49,7 +61,7 @@ class StatDrawer:
         treppenhaus_counts, _ = np.histogram(spawns[treppenhaus],  bins=bins)
         aufzug_counts         = gesamt_counts - treppenhaus_counts
 
-        # ── X-Achse: Uhrzeiten berechnen ─────────────────────────────────────────
+        # X-Achse: Uhrzeiten berechnen 
         # Wir verwenden die Sekunden als numerische X-Werte intern,
         # zeigen aber Uhrzeiten als Beschriftung an
         tick_abstand = 3600  # alle 60 Minuten ein Tick
@@ -63,13 +75,13 @@ class StatDrawer:
         # Balkenbreite in Sekunden
         breite = (bins[1] - bins[0]) * 0.85
 
-        # ── Plot ──────────────────────────────────────────────────────────────────
+        # Plot 
         fig, axes = plt.subplots(2, 1, figsize=(14, 8), sharex=True,
                                 gridspec_kw={"height_ratios": [3, 1]})
         fig.suptitle("Fahrgastaufkommen über die Simulationszeit",
                     fontsize=15, fontweight="bold", y=0.98)
 
-        # ── Oberes Diagramm: Aufkommen gestapelt ─────────────────────────────────
+        # Oberes Diagramm: Aufkommen gestapelt 
         ax1 = axes[0]
         ax1.bar(bin_mitte, aufzug_counts,
                 width=breite, label="Aufzug genutzt",
@@ -100,7 +112,7 @@ class StatDrawer:
                     xytext=(bin_mitte[max_idx] + tick_abstand * 0.1,
                             gesamt_counts[max_idx] + 0.3))
 
-        # ── Unteres Diagramm: Treppenhaus-Anteil in % ────────────────────────────
+        #  Unteres Diagramm: Treppenhaus-Anteil in %
         ax2 = axes[1]
         anteil = np.where(gesamt_counts > 0,
                         treppenhaus_counts / gesamt_counts * 100, 0)
@@ -115,7 +127,7 @@ class StatDrawer:
         ax2.legend(fontsize=9)
         ax2.grid(axis="y", linestyle="--", alpha=0.4, zorder=0)
 
-        # ── X-Achsen-Ticks auf Uhrzeiten setzen ──────────────────────────────────
+        # X-Achsen-Ticks auf Uhrzeiten setzen 
         # Limits explizit setzen damit Ticks nicht von sharex überschrieben werden
         x_min = bins[0]  - breite
         x_max = bins[-1] + breite
@@ -133,7 +145,7 @@ class StatDrawer:
         ax1.set_xticklabels([])                     # oben keine Beschriftung
         ax2.set_xticklabels(ticks_lab, fontsize=9)  # unten Uhrzeiten
 
-        # ── Zusammenfassung als Text ──────────────────────────────────────────────
+        # Zusammenfassung als Text 
         gesamt      = len(spawns)
         treppe_n    = int(treppenhaus.sum())
         treppe_pct  = treppe_n / gesamt * 100
@@ -160,7 +172,7 @@ class StatDrawer:
         3. Durchschnittliche Wartezeit pro Startetage
         """
 
-        # ── Daten laden ───────────────────────────────────────────────────────────
+        # Daten laden 
         with open(csv_pfad, newline="") as f:
             rows = list(csv.DictReader(f))
 
@@ -178,7 +190,7 @@ class StatDrawer:
         sim_start = min(spawns_aufzug.min(), spawns_treppe.min())
         sim_end   = max(spawns_aufzug.max(), spawns_treppe.max())
 
-        # ── Zeitfenster für Tageszeit-Ansicht ────────────────────────────────────
+        # Zeitfenster für Tageszeit-Ansicht 
         bins      = np.arange(sim_start, sim_end + intervall_sekunden, intervall_sekunden)
         bin_mitte = (bins[:-1] + bins[1:]) / 2
 
@@ -189,7 +201,7 @@ class StatDrawer:
             if maske.sum() > 0:
                 avg_wartezeit[i] = wartezeit_aufzug[maske].mean()
 
-        # ── X-Achse Uhrzeiten ─────────────────────────────────────────────────────
+        # X-Achse Uhrzeiten 
         tick_abstand    = 3600
         tick_positionen = np.arange(
             (int(sim_start / tick_abstand)) * tick_abstand,
@@ -204,7 +216,7 @@ class StatDrawer:
         ticks_pos = [t[0] for t in ticks_im_bereich]
         ticks_lab = [t[1] for t in ticks_im_bereich]
 
-        # ── Plot aufbauen ─────────────────────────────────────────────────────────
+        # Plot aufbauen 
         fig = plt.figure(figsize=(16, 10))
         fig.suptitle("Wartezeiten der Fahrgäste", fontsize=15, fontweight="bold", y=0.98)
 
@@ -213,7 +225,7 @@ class StatDrawer:
         ax_hist  = fig.add_subplot(gs[1, 0])   # unten links
         ax_etage = fig.add_subplot(gs[1, 1])   # unten rechts
 
-        # ── 1. Wartezeit über Tageszeit ───────────────────────────────────────────
+        #1. Wartezeit über Tageszeit 
         breite = (bins[1] - bins[0]) * 0.85
         ax_zeit.bar(bin_mitte, avg_wartezeit,
                     width=breite, color="#4A90D9", alpha=0.75,
@@ -241,7 +253,7 @@ class StatDrawer:
         ax_zeit.grid(axis="y", linestyle="--", alpha=0.4, zorder=0)
         ax_zeit.set_title("Durchschnittliche Wartezeit über die Tageszeit", fontsize=12)
 
-        # ── 2. Histogramm der Wartezeiten ─────────────────────────────────────────
+        #2. Histogramm der Wartezeiten 
         alle_wartezeiten = np.concatenate([wartezeit_aufzug, wartezeit_treppe])
         hist_max  = int(np.ceil(alle_wartezeiten.max() / 5) * 5)
         hist_bins = np.arange(0, hist_max + 5, 5)
@@ -264,7 +276,7 @@ class StatDrawer:
                         fontsize=8, color="#333",
                         arrowprops=dict(arrowstyle="->", color="#999", lw=1))
 
-        # ── 3. Wartezeit pro Startetage ───────────────────────────────────────────
+        #3. Wartezeit pro Startetage 
         etagen_nummern = sorted(set(startetagen))
         avg_pro_etage  = [wartezeit_aufzug[startetagen == e].mean() for e in etagen_nummern]
         std_pro_etage  = [wartezeit_aufzug[startetagen == e].std()  for e in etagen_nummern]
@@ -291,7 +303,7 @@ class StatDrawer:
         ax_etage.set_ylim(bottom=0)
         ax_etage.grid(axis="y", linestyle="--", alpha=0.4, zorder=0)
 
-        # ── Zusammenfassung ───────────────────────────────────────────────────────
+        # Zusammenfassung
         zusammenfassung = (
             f"Aufzug: {len(aufzug_rows)} Fahrgäste  |  "
             f"Ø gesamt (inkl. Treppe): {gesamt_avg_alle:.1f}s  |  "
@@ -307,6 +319,11 @@ class StatDrawer:
 
 
     def draw_aufzug_routen(self, csv_pfad, zeitstempel):
+        """
+        Visualisiert die Fahrtrouten jedes Aufzugs als Etage-über-Zeit-Diagramm.
+        Haltepunkte werden als Kreise dargestellt — die Größe entspricht der Fahrgastanzahl.
+        Wartepunkte werden als graue Quadrate markiert.
+        """
         # Farben und Symbole pro Aufzug
         AUFZUG_FARBEN = {"A": "#4A90D9", "B": "#E05C5C", "C": "#2ECC71"}
         
@@ -329,11 +346,11 @@ class StatDrawer:
         
         sim_end = max(d["t"].max() for d in aufzuege.values())
         
-        # ── X-Achsen Ticks ────────────────────────────────────────────────────────────
+        # X-Achsen Ticks 
         tick_pos = np.arange(0, sim_end + 3600, 3600)
         tick_lab = [self.sekunden_zu_uhrzeit(s) for s in tick_pos]
         
-        # ── Plot ──────────────────────────────────────────────────────────────────────
+        # Plot 
         fig, axes = plt.subplots(3, 1, figsize=(18, 12), sharex=True)
         fig.suptitle("Fahrtrouten der Aufzüge über die Simulationszeit",
                     fontsize=15, fontweight="bold", y=0.99)
@@ -346,11 +363,11 @@ class StatDrawer:
             fahrgaeste = data["fahrgaeste"]
             farbe   = AUFZUG_FARBEN[aid]
         
-            # ── Fahrtlinie ────────────────────────────────────────────────────────────
+            # Fahrtlinie 
             ax.plot(t, etage,
                     color=farbe, linewidth=1.5, zorder=2, alpha=0.9)
         
-            # ── Fahrgastanzahl als Linienstärke-Variante: Punkte bei Stops ────────────
+            # Fahrgastanzahl als Linienstärke-Variante: Punkte bei Stops 
             # Halte markieren (EINLADEN oder AUSSTEIGEN)
             halt_maske = np.array([z in ("EINLADEN", "AUSSTEIGEN") for z in zustand])
             if halt_maske.any():
@@ -366,7 +383,7 @@ class StatDrawer:
                         s=20, color="#95A5A6", marker="s",
                         zorder=3, alpha=0.5)
         
-            # ── Achsen formatieren ────────────────────────────────────────────────────
+            # Achsen formatieren 
             ax.set_ylabel("Etage", fontsize=10)
             ax.set_yticks(range(10))
             ax.set_yticklabels([f"E{e}" for e in range(10)], fontsize=8)
@@ -385,13 +402,13 @@ class StatDrawer:
             ax.set_title(f"▲ {fahrten_hoch}×  ▼ {fahrten_runter}×  W {wartezeit_n}×",
                         fontsize=9, loc="right", pad=4, color="#555")
         
-        # ── X-Achse ───────────────────────────────────────────────────────────────────
+        # X-Achse 
         axes[-1].set_xlabel("Uhrzeit", fontsize=11)
         axes[-1].set_xticks(tick_pos)
         axes[-1].set_xticklabels(tick_lab, fontsize=9)
         axes[-1].set_xlim(0, sim_end)
         
-        # ── Legende ───────────────────────────────────────────────────────────────────
+        # Legende 
         legende_elemente = [
             Line2D([0], [0], marker="o", color="gray", markersize=8,
                 label="Halt (Größe = Fahrgäste im Aufzug)", linestyle="None"),
@@ -406,15 +423,19 @@ class StatDrawer:
 
 
     def draw_fahrstuhlauslastung(self, csv_pfad, zeitstempel):
+        """
+        Berechnet und visualisiert die durchschnittliche Auslastung jedes Aufzugs
+        als zeitgewichteten Durchschnitt (Fahrgäste × Intervalldauer / Gesamtzeit).
+        """
         MAX_KAPAZITAET   = 5
         AUFZUG_FARBEN    = {"A": "#4A90D9", "B": "#E05C5C", "C": "#2ECC71"}
-        # ── Daten laden ───────────────────────────────────────────────────────────────
+        # Daten laden 
         with open(csv_pfad, newline="") as f:
             rows = list(csv.DictReader(f))
         
         aufzug_rows = [r for r in rows if r["aufzug_id"] and r["aufzug_etage"]]
         
-        # ── Durchschnittliche Auslastung pro Aufzug berechnen ─────────────────────────
+        # Durchschnittliche Auslastung pro Aufzug berechnen 
         # Gewichteter Durchschnitt: Fahrgäste × Zeitdauer des Intervalls
         auslastung = {}
         for aid in ["A", "B", "C"]:
@@ -428,7 +449,7 @@ class StatDrawer:
             # Gewichteter Durchschnitt (letzten Eintrag weglassen da keine Dauer bekannt)
             auslastung[aid] = np.sum(fahrgaeste[:-1] * dauern) / zeiten[-1]
         
-        # ── Plot ──────────────────────────────────────────────────────────────────────
+        # Plot 
         fig, ax = plt.subplots(figsize=(10, 5))
         
         aufzug_ids = ["A", "B", "C"]
