@@ -7,6 +7,14 @@ FAHREND_RUNTER = "FAHREND_RUNTER"
 
 
 class Aufzug:
+    """
+    Simuliert einen einzelnen Aufzug im Gebäude als SimPy-Prozess.
+    Implementiert den SCAN-Algorithmus: fährt in einer Richtung bis keine Ziele mehr
+    in dieser Richtung vorhanden sind, bestimmt dann die neue Richtung und wartet
+    bei Bedarf auf den nächsten Fahrgast.
+
+    Zustände: WARTEN -> EINLADEN -> FAHREND_HOCH/FAHREND_RUNTER -> AUSLADEN -> ...
+    """
     def __init__(self, env, etagen, num_etagen, fahrt_zeit, halt_zeit=5, aufzug_id="A", kapazitaet=5, schrittlogger=None):
         self.env            = env
         self.etagen         = etagen
