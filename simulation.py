@@ -134,7 +134,6 @@ def main():
         statdrawer = StatDrawer()
         statdrawer.visualisiere_aufkommen(csv_pfad, zeitstempel)
         statdrawer.visualisiere_wartezeiten(csv_pfad, zeitstempel, MAX_PATIENCE)
-        statdrawer.visualisiere_etagenanalyse(csv_pfad, zeitstempel)
         statdrawer.draw_aufzug_routen(schritt_pfad, zeitstempel)
         statdrawer.draw_fahrstuhlauslastung(schritt_pfad, zeitstempel)
 
