@@ -68,7 +68,7 @@ class Logger:
                     fg.nimmt_treppenhaus,
                 ])
 
-    def schliessen(self):
+    def schliesse_csv(self):
         """Schließt die CSV-Datei. Muss am Ende der Simulation aufgerufen werden."""
         if self._csv_datei:
             self._csv_datei.close()
@@ -81,7 +81,7 @@ class Logger:
         runter = sum(len(e.store_down.items) for e in self._etagen)
         return hoch, runter
 
-    def _schreibe(self, t, ereignis, aufzug=None, fahrgast=None):
+    def schreibe_zu_csv(self, t, ereignis, aufzug=None, fahrgast=None):
         """
         Schreibt eine Ereigniszeile in die CSV. Felder die nicht zum Ereignis gehören
         (z.B. Fahrgastdaten bei einem reinen Aufzugereignis) werden als leerer String gespeichert.
@@ -107,25 +107,25 @@ class Logger:
 
     def fahrgast_spawn(self, t, fahrgast):
         """Fahrgast erscheint erstmals in einer Etage und wartet auf den Aufzug."""
-        self._schreibe(t, FAHRGAST_SPAWN, fahrgast=fahrgast)
+        self.schreibe_zu_csv(t, FAHRGAST_SPAWN, fahrgast=fahrgast)
 
     def fahrgast_eingestiegen(self, t, aufzug, fahrgast):
         """Fahrgast wurde vom Aufzug eingeladen und fährt mit."""
-        self._schreibe(t, EINGESTIEGEN, aufzug=aufzug, fahrgast=fahrgast)
+        self.schreibe_zu_csv(t, EINGESTIEGEN, aufzug=aufzug, fahrgast=fahrgast)
 
     def fahrgast_angekommen(self, t, aufzug, fahrgast):
         """Fahrgast hat seine Zieletage erreicht und verlässt den Aufzug."""
-        self._schreibe(t, ANGEKOMMEN, aufzug=aufzug, fahrgast=fahrgast)
+        self.schreibe_zu_csv(t, ANGEKOMMEN, aufzug=aufzug, fahrgast=fahrgast)
 
     def fahrgast_treppenhaus(self, t, fahrgast):
         """Fahrgast hat die Geduld verloren und nimmt stattdessen die Treppe."""
-        self._schreibe(t, TREPPENHAUS, fahrgast=fahrgast)
+        self.schreibe_zu_csv(t, TREPPENHAUS, fahrgast=fahrgast)
 
     def aufzug_fahrend(self, t, aufzug):
         """Aufzug bewegt sich eine Etage in seiner aktuellen Fahrtrichtung."""
         ereignis = AUFZUG_FAHREND_HOCH if aufzug.fahrtrichtung == "up" else AUFZUG_FAHREND_RUNTER
-        self._schreibe(t, ereignis, aufzug=aufzug)
+        self.schreibe_zu_csv(t, ereignis, aufzug=aufzug)
 
     def aufzug_wartend(self, t, aufzug):
         """Aufzug wechselt in den Wartezustand weil keine Fahrgäste mehr in seiner Richtung warten."""
-        self._schreibe(t, AUFZUG_WARTEND, aufzug=aufzug)
+        self.schreibe_zu_csv(t, AUFZUG_WARTEND, aufzug=aufzug)

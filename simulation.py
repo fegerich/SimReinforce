@@ -105,7 +105,7 @@ def main():
     env.process(office.fahrgast_generator())
 
     env.run(until=office.fertig)
-    logger.schliessen()
+    logger.schliesse_csv()
 
     csv_pfad = os.path.join("Output", f"fahrgaeste_{zeitstempel}.csv")
     logger.schreibe_fahrgaeste(csv_pfad, abgeschlossene)
