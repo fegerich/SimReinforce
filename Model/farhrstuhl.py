@@ -6,7 +6,7 @@ FAHREND_HOCH   = "FAHREND_HOCH"
 FAHREND_RUNTER = "FAHREND_RUNTER"
 
 
-class Aufzug:
+class Fahrstuhl:
     """
     Simuliert einen einzelnen Aufzug im Gebäude als SimPy-Prozess.
     Implementiert den SCAN-Algorithmus: fährt in einer Richtung bis keine Ziele mehr
