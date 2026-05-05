@@ -132,10 +132,10 @@ def main():
         Animator(schritt_pfad, tageszeiten=TAGESZEITEN).run()
     if ZEIGE_STATISTIKEN:
         statdrawer = Plottter()
-        statdrawer.visualisiere_aufkommen(csv_pfad, zeitstempel)
-        statdrawer.visualisiere_wartezeiten(csv_pfad, zeitstempel, MAX_PATIENCE)
-        statdrawer.draw_aufzug_routen(schritt_pfad, zeitstempel)
-        statdrawer.draw_fahrstuhlauslastung(schritt_pfad, zeitstempel)
+        statdrawer.zeichne_aufkommen(csv_pfad, zeitstempel)
+        statdrawer.zeichne_wartezeiten(csv_pfad, zeitstempel, MAX_PATIENCE)
+        statdrawer.zeichne_aufzug_routen(schritt_pfad, zeitstempel)
+        statdrawer.zeichne_fahrstuhlauslastung(schritt_pfad, zeitstempel)
 
 
 if __name__ == "__main__":

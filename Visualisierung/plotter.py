@@ -32,7 +32,7 @@ class Plottter:
         return f"{stunde:02d}:{minute:02d}"
     
 
-    def visualisiere_aufkommen(self, csv_pfad: str, zeitstempel: str, intervall_sekunden: int = 300):
+    def zeichne_aufkommen(self, csv_pfad: str, zeitstempel: str, intervall_sekunden: int = 300):
         """
         Liest eine Fahrgast-Log-CSV und visualisiert das durchschnittliche
         Fahrgastaufkommen über die Simulationszeit mit Uhrzeiten auf der X-Achse.
@@ -164,7 +164,7 @@ class Plottter:
         plt.show()
 
 
-    def visualisiere_wartezeiten(self, csv_pfad: str, zeitstempel: str, max_wartezeit, intervall_sekunden: int = 300):
+    def zeichne_wartezeiten(self, csv_pfad: str, zeitstempel: str, max_wartezeit, intervall_sekunden: int = 300):
         """
         Visualisiert die durchschnittliche Wartezeit der Fahrgäste in drei Ansichten:
         1. Durchschnittliche Wartezeit über die Tageszeit
@@ -318,7 +318,7 @@ class Plottter:
         plt.show()
 
 
-    def draw_aufzug_routen(self, csv_pfad, zeitstempel):
+    def zeichne_aufzug_routen(self, csv_pfad, zeitstempel):
         """
         Visualisiert die Fahrtrouten jedes Aufzugs als Etage-über-Zeit-Diagramm.
         Haltepunkte werden als Kreise dargestellt — die Größe entspricht der Fahrgastanzahl.
@@ -422,7 +422,7 @@ class Plottter:
         plt.show()
 
 
-    def draw_fahrstuhlauslastung(self, csv_pfad, zeitstempel):
+    def zeichne_fahrstuhlauslastung(self, csv_pfad, zeitstempel):
         """
         Berechnet und visualisiert die durchschnittliche Auslastung jedes Aufzugs
         als zeitgewichteten Durchschnitt (Fahrgäste × Intervalldauer / Gesamtzeit).
