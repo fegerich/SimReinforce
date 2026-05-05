@@ -3,7 +3,7 @@ import random
 import os
 from datetime import datetime
 from Model.etage import Etage
-from Model.aufzug import Aufzug
+from Model.farhrstuhl import Fahrstuhl
 from Model.buero import Buero
 from Model.tageszeit import Tageszeit
 from Visualisierung.logger import Logger
@@ -93,7 +93,7 @@ def main():
     logger.init_schritte(schritt_pfad, etagen)
 
     aufzuege = [
-        Aufzug(env, etagen, NUM_ETAGEN, FAHRT_ZEIT, aufzug_id=chr(ord("A") + i), kapazitaet=MAX_KAPAZITAET, schrittlogger=logger)
+        Fahrstuhl(env, etagen, NUM_ETAGEN, FAHRT_ZEIT, aufzug_id=chr(ord("A") + i), kapazitaet=MAX_KAPAZITAET, schrittlogger=logger)
         for i in range(NUM_AUFZUEGE)
     ]
     for a in aufzuege:
