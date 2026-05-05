@@ -54,7 +54,8 @@ class Animator:
     HOEHE  = 820
 
     def __init__(self, csv_pfad, tageszeiten=None):
-        self._schritte    = self._lade_und_baue(csv_pfad)
+        zeilen            = self._lade_csv(csv_pfad)
+        self._schritte    = self._rekonstruiere_verlauf(zeilen)
         self._tageszeiten = tageszeiten or []
         self._index       = 0
         self._play        = False
@@ -86,13 +87,8 @@ class Animator:
 
     # CSV laden & Zustände aufbauen
 
-    def _lade_und_baue(self, pfad):
-        """
-        Liest die Schritte-CSV und rekonstruiert daraus den vollständigen Zustandsverlauf.
-        Für jeden Eintrag wird ein Snapshot erstellt der den Zustand aller Aufzüge,
-        Wartenden pro Etage und Treppenhaus-Zähler zum jeweiligen Zeitpunkt enthält.
-        pax_ziele wird durch EINGESTIEGEN (append) und ANGEKOMMEN (remove) rekonstruiert.
-        """
+    def _lade_csv(self, pfad):
+        """Liest die Schritte-CSV und ermittelt alle Aufzug-IDs und die Etagenanzahl aus den Daten."""
         with open(pfad, newline="", encoding="utf-8") as f:
             zeilen = list(csv.DictReader(f))
 
@@ -107,12 +103,20 @@ class Animator:
         self._aufzug_ids = sorted(aufzug_ids)
         self._num_etagen = max(etagen_set) + 1 if etagen_set else 10
 
+        return zeilen
+
+    def _rekonstruiere_verlauf(self, zeilen):
+        """
+        Baut aus den CSV-Zeilen einen vollständigen Zustandsverlauf auf.
+        Für jeden Eintrag wird ein Snapshot aller Aufzüge, Wartenden und Treppenhaus-Zähler erstellt.
+        pax_ziele wird durch EINGESTIEGEN (append) und ANGEKOMMEN (remove) rekonstruiert.
+        """
         aufzuege = {
             aid: {"etage": 0, "zustand": "WARTEND", "fahrgaeste": 0, "pax_ziele": []}
             for aid in self._aufzug_ids
         }
-        floor_w      = {e: {"up": 0, "down": 0} for e in range(self._num_etagen)}
-        floor_treppe = {e: 0 for e in range(self._num_etagen)}
+        floor_w       = {e: {"up": 0, "down": 0} for e in range(self._num_etagen)}
+        floor_treppe  = {e: 0 for e in range(self._num_etagen)}
         treppe_gesamt = 0
 
         schritte = []
@@ -355,7 +359,7 @@ class Animator:
 
         cy = py + 14
 
-        # ── Tageszeit ──
+        # Tageszeit 
         if self._tageszeiten:
             self._txt("Tageszeit", px + 12, cy, self._font_s, GRAU)
             cy += 18
@@ -367,7 +371,7 @@ class Animator:
             self._linie(px, cy, pw)
             cy += 10
 
-        # ── Ereignis ──
+        # Ereignis 
         ereignis = s["ereignis"]
         efarbe   = EREIGNIS_FARBE.get(ereignis, WEISS)
         self._txt("Ereignis", px + 12, cy, self._font_s, GRAU)
@@ -388,7 +392,7 @@ class Animator:
         self._linie(px, cy, pw)
         cy += 10
 
-        # ── Aufzüge ──
+        # Aufzüge 
         self._txt("Aufzüge", px + 12, cy, self._font_s, GRAU)
         cy += 18
         for aid in self._aufzug_ids:
@@ -409,7 +413,7 @@ class Animator:
         self._linie(px, cy, pw)
         cy += 10
 
-        # ── Wartend + Treppenhaus gesamt ──
+        # Wartend + Treppenhaus gesamt 
         self._txt("Wartend gesamt", px + 12, cy, self._font_s, GRAU)
         cy += 18
         self._txt(f"▲ Hoch:   {s['w_hoch']:3d}", px + 12, cy, self._font_m, (100, 225, 100))
@@ -425,7 +429,7 @@ class Animator:
         self._linie(px, cy, pw)
         cy += 10
 
-        # ── Steuerung ──
+        # Steuerung 
         self._txt("Steuerung", px + 12, cy, self._font_s, GRAU)
         cy += 18
         for taste, beschr in [
