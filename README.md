@@ -10,9 +10,19 @@ An Elevator simulation coupled with reinforcemant learning to get an optimal ele
 ### Umgebung einrichten
 
 ```bash
-conda create --name simreinforce --file requirements.txt
-conda activate simreinforce
+conda env create -f environment.yml
+conda activate sim_reinforce_fg
 ```
+
+Falls das nicht funktioniert wurden folgende Bibliothecken und Versionen verwendet:
+
+Python 3.12.13
+
+numpy 2.4.3
+simpy 4.1.1
+matplotlib 3.10.9
+pygame 2.6.1
+
 
 ### Simulation starten
 
