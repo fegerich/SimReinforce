@@ -5,7 +5,7 @@ An Elevator simulation coupled with reinforcemant learning to get an optimal ele
 
 ### Voraussetzungen
 - [Anaconda](https://www.anaconda.com/) oder [Miniconda](https://docs.conda.io/en/latest/miniconda.html)
-- Windows 64-bit (die `requirements.txt` enthält plattformspezifische Pakete für win-64)
+- Windows 64-bit (die `environment.yml` enthält plattformspezifische Pakete für win-64)
 
 ### Umgebung einrichten
 
