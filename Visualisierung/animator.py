@@ -49,6 +49,22 @@ class Animator:
     Pygame-basierte Schritt-Visualisierung der Simulation.
     Liest die Schritte-CSV und baut daraus einen vollständigen Zustandsverlauf auf,
     der dann als interaktive Animation abgespielt werden kann.
+
+    Klassenattribute:
+        BREITE / HOEHE      : Fenstergröße in Pixeln
+
+    Instanzattribute:
+        _schritte           : Liste aller vorberechneten Zustandssnapshots (ein Eintrag pro CSV-Zeile)
+        _tageszeiten        : Optionale Tageszeit-Konfiguration für die Anzeige im Panel
+        _index              : Index des aktuell angezeigten Snapshots
+        _play               : True wenn die Animation läuft, False bei Pause
+        _speed_i            : Index in GESCHWINDIGKEITEN — bestimmt wie viele Schritte pro Sekunde gezeigt werden
+        _acc                : Akkumulierter Zeitpuffer für die Schrittgeschwindigkeit
+        _aufzug_ids         : Sortierte Liste der Aufzug-IDs aus der CSV (z.B. ['A', 'B', 'C'])
+        _num_etagen         : Anzahl der Etagen, abgeleitet aus den Daten
+        _bau_x/y/w/h        : Position und Größe des Gebäudebereichs
+        _pan_x/y/w/h        : Position und Größe des rechten Panels
+        _ctrl_y             : Y-Position der Steuerleiste
     """
     BREITE = 1100
     HOEHE  = 820
