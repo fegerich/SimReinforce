@@ -1,4 +1,5 @@
 import csv
+import os
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
@@ -22,7 +23,7 @@ class Plottter:
     """
 
     def __init__(self):
-        pass
+        os.makedirs("Visualisierung/Abbildungen", exist_ok=True)
 
     def sekunden_zu_uhrzeit(self, sekunden: float):
         """Rechnet Simulationssekunden in eine Uhrzeit um (0s = 08:00 Uhr)."""
