@@ -398,11 +398,11 @@ class Animator:
         if s["fid"] is not None:
             self._txt(f"F{s['fid']:03d}: E{s['f_etage']} -> E{s['f_ziel']}",
                       px + 12, cy, self._font_m, GRAU_HELL)
-            cy += 22
+        cy += 22
         if s["aid"]:
             self._txt(f"Aufzug {s['aid']}", px + 12, cy, self._font_m,
                       ID_FARBE.get(s["aid"], GRAU_HELL))
-            cy += 22
+        cy += 22
         cy += 6
 
         self._linie(px, cy, pw)
