@@ -6,9 +6,13 @@ from Model.etage import Etage
 from Model.farhrstuhl import Fahrstuhl
 from Model.buero import Buero
 from Model.tageszeit import Tageszeit
+from Model.strategie import ScanStrategie, Strategie, RLStrategie
 from Visualisierung.logger import Logger
 from Visualisierung.plotter import Plottter
 from Visualisierung.animator import Animator
+from stable_baselines3 import PPO
+
+
 
 
 # Simulations Konfiguration
@@ -79,7 +83,32 @@ TAGESZEITEN = [
 
 
 # Simulation starten
-def main():
+def main(strategie: Strategie = None):
+    """
+    Startet die Simulation mit der übergebenen Aufzugsstrategie.
+
+    Parameters
+    ----------
+    strategie : Strategie, optional
+        Steuerungsstrategie für alle Aufzüge.
+        Standard: ScanStrategie (originaler SCAN-Algorithmus).
+
+    Beispiele
+    ---------
+    main()                                    # SCAN (Standard)
+    main(strategie=ScanStrategie())           # explizit SCAN
+
+    from Model.strategie import ZielEtageStrategie
+    s = ZielEtageStrategie()
+    main(strategie=s)                         # manuelle Zieletagen
+
+    from stable_baselines3 import PPO
+    from Model.strategie import RLStrategie
+    main(strategie=RLStrategie(PPO.load("elevator_ppo")))  # RL-Modell
+    """
+    if strategie is None:
+        strategie = ScanStrategie()
+
     random.seed(SEED)
 
     zeitstempel = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
@@ -93,9 +122,11 @@ def main():
     logger.init_schritte(schritt_pfad, etagen)
 
     aufzuege = [
-        Fahrstuhl(env, etagen, NUM_ETAGEN, FAHRT_ZEIT, aufzug_id=chr(ord("A") + i), kapazitaet=MAX_KAPAZITAET, schrittlogger=logger)
+        Fahrstuhl(env, etagen, NUM_ETAGEN, FAHRT_ZEIT, aufzug_id=chr(ord("A") + i),
+                  kapazitaet=MAX_KAPAZITAET, schrittlogger=logger, strategie=strategie)
         for i in range(NUM_AUFZUEGE)
     ]
+    strategie.initialisiere(aufzuege, etagen)  # Für RLStrategie: Referenzen übergeben
     for a in aufzuege:
         env.process(a.run())
 
@@ -139,4 +170,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main(strategie=RLStrategie(PPO.load("Output/rl_training/best_model")))

@@ -1,3 +1,5 @@
+from Model.strategie import ScanStrategie
+
 # Zustände
 WARTEN         = "WARTEN"
 EINLADEN       = "EINLADEN"
@@ -15,7 +17,7 @@ class Fahrstuhl:
 
     Zustände: WARTEN -> EINLADEN -> FAHREND_HOCH/FAHREND_RUNTER -> AUSLADEN -> ...
     """
-    def __init__(self, env, etagen, num_etagen, fahrt_zeit, halt_zeit=5, aufzug_id="A", kapazitaet=5, schrittlogger=None):
+    def __init__(self, env, etagen, num_etagen, fahrt_zeit, halt_zeit=5, aufzug_id="A", kapazitaet=5, schrittlogger=None, strategie=None):
         self.env            = env
         self.etagen         = etagen
         self.num_etagen     = num_etagen
@@ -24,6 +26,8 @@ class Fahrstuhl:
         self.aufzug_id      = aufzug_id
         self.kapazitaet     = kapazitaet
         self.schrittlogger  = schrittlogger
+
+        self.strategie      = strategie if strategie is not None else ScanStrategie()
 
         self.aktuelle_etage = 0
         self.fahrtrichtung  = "up"
@@ -137,20 +141,28 @@ class Fahrstuhl:
             )
             yield from self._einladen(store)
 
-            # WARTEN 
+            # WARTEN
             if not self.im_aufzug and not self.ziele_in_richtung():
                 self.zustand = WARTEN
                 if self.schrittlogger:
                     self.schrittlogger.aufzug_wartend(self.env.now, self)
-                # warte_event wird neu erstellt damit aufwecken() erneut verwendet werden kann
-                self.warte_event = self.env.event()
-                if not self.irgendwo_wartende():
-                    yield self.warte_event
+
+                if self.strategie.blockiere_wenn_leer():
+                    # SCAN: warte_event wird neu erstellt damit aufwecken() erneut verwendet werden kann
+                    self.warte_event = self.env.event()
+                    if not self.irgendwo_wartende():
+                        yield self.warte_event
+                    else:
+                        # Bereits Wartende vorhanden: sofort weitermachen ohne zu blockieren
+                        self.warte_event.succeed()
+                        yield self.warte_event
                 else:
-                    # Bereits Wartende vorhanden: sofort weitermachen ohne zu blockieren
-                    self.warte_event.succeed()
-                    yield self.warte_event
-                self.fahrtrichtung = self.bestimme_richtung()
+                    # RL/Zieletage: kurze Pause damit Simulationszeit voranschreitet
+                    yield self.env.timeout(self.fahrt_zeit)
+
+                neue_richtung = self.strategie.naechste_richtung(self, self.etagen, self.env.now)
+                if neue_richtung:
+                    self.fahrtrichtung = neue_richtung
                 store2 = (
                     self.etagen[self.aktuelle_etage].store_up
                     if self.fahrtrichtung == "up"
@@ -158,9 +170,9 @@ class Fahrstuhl:
                 )
                 yield from self._einladen(store2)
 
-            # FAHREND 
+            # FAHREND
             # Nochmal prüfen: nach dem Einladen könnte der Aufzug noch leer sein
-            if not self.im_aufzug and not self.ziele_in_richtung():
+            if not self.im_aufzug and not self.ziele_in_richtung() and not self.strategie.hat_fahrgrund(self):
                 continue
 
             self.zustand = FAHREND_HOCH if self.fahrtrichtung == "up" else FAHREND_RUNTER
