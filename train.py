@@ -29,6 +29,7 @@ os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 # SB3/torch muss vor numpy importiert werden, damit PyTorch-DLLs zuerst geladen
 # werden – andernfalls lädt Intel-MKL (über numpy) libiomp5md.dll und blockiert
 # anschließend das Laden von torch/lib/shm.dll (WinError 127, Windows/Conda).
+import torch as th
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
 from stable_baselines3.common.env_util import make_vec_env
@@ -41,26 +42,27 @@ import Env  # noqa: F401 – registriert "ElevatorEnv-v0" bei Gymnasium
 
 import gymnasium
 
-# ── Konfiguration ──────────────────────────────────────────────────────
+# Konfiguration 
 OUTPUT_DIR      = os.path.join("Output", "rl_training")
 N_ENVS          = 4          # Parallele Trainingsumgebungen
-TOTAL_TIMESTEPS = 500_000    # Demo-Wert; für gute Ergebnisse: >= 2_000_000
+TOTAL_TIMESTEPS = 2_000_000    # Demo-Wert, für richtiges Training höher
 SEED            = 42
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs("Output", exist_ok=True)
 
-# ── 1. Umgebungen ──────────────────────────────────────────────────────
+# 1. Umgebungen 
 print("Erstelle Umgebungen …")
 train_env = make_vec_env("ElevatorEnv-v0", n_envs=N_ENVS, seed=SEED)
 eval_env  = Monitor(gymnasium.make("ElevatorEnv-v0"))
 
-# ── 2. Modell ──────────────────────────────────────────────────────────
+# 2. Modell 
 model = PPO(
     "MlpPolicy",
     train_env,
     verbose=1,
     seed=SEED,
+    policy_kwargs=dict(net_arch=[64, 128, 64], activation_fn=th.nn.ReLU),
     # Hyperparameter
     learning_rate=3e-4,
     n_steps=2048,      # Schritte je Update-Zyklus pro Env
@@ -73,7 +75,7 @@ model = PPO(
     tensorboard_log=os.path.join(OUTPUT_DIR, "tb_logs"),
 )
 
-# ── 3. Callbacks ───────────────────────────────────────────────────────
+# 3. Callbacks 
 eval_callback = EvalCallback(
     eval_env,
     best_model_save_path=OUTPUT_DIR,          # speichert als best_model.zip
@@ -91,7 +93,7 @@ checkpoint_callback = CheckpointCallback(
     verbose=0,
 )
 
-# ── 4. Training ────────────────────────────────────────────────────────
+# 4. Training 
 print(f"\nStarte Training: {TOTAL_TIMESTEPS:,} Schritte | {N_ENVS} parallele Envs")
 print(f"TensorBoard:  tensorboard --logdir {OUTPUT_DIR}/tb_logs\n")
 
@@ -108,13 +110,15 @@ print(f"\nModell gespeichert: {final_path}.zip")
 print(f"Training dauerte:   {dauer_min:.1f} Minuten")
 
 
-# ── 5. Schnellvergleich ────────────────────────────────────────────────
+#5. Schnellvergleich 
 
 def _episode(env, policy=None) -> dict:
     """Führt eine vollständige Episode durch; policy=None → Zufallsaktionen."""
     obs, _ = env.reset()
     total_reward = 0.0
     delivered = stairs = 0
+    wartezeit_summe = 0.0
+    wartezeit_anz   = 0
     steps = 0
     while True:
         if policy is None:
@@ -122,25 +126,30 @@ def _episode(env, policy=None) -> dict:
         else:
             action, _ = policy.predict(obs, deterministic=True)
         obs, reward, terminated, truncated, info = env.step(action)
-        total_reward += reward
-        delivered    += info["delivered"]
-        stairs       += info["stairs"]
-        steps        += 1
+        total_reward    += reward
+        delivered       += info["delivered"]
+        stairs          += info["stairs"]
+        wartezeit_summe += info["wartezeit_summe"]
+        wartezeit_anz   += info["wartezeit_anz"]
+        steps           += 1
         if terminated or truncated:
             break
+    avg_wartezeit = wartezeit_summe / wartezeit_anz if wartezeit_anz > 0 else 0.0
     return {"reward": total_reward, "delivered": delivered,
-            "stairs": stairs, "steps": steps}
+            "stairs": stairs, "steps": steps, "avg_wartezeit": avg_wartezeit}
 
 
 def evaluiere(policy, label: str, n: int = 2) -> None:
     env = gymnasium.make("ElevatorEnv-v0")
     ergebnisse = [_episode(env, policy) for _ in range(n)]
     env.close()
-    r  = np.mean([e["reward"]    for e in ergebnisse])
-    d  = np.mean([e["delivered"] for e in ergebnisse])
-    s  = np.mean([e["stairs"]    for e in ergebnisse])
+    r  = np.mean([e["reward"]        for e in ergebnisse])
+    d  = np.mean([e["delivered"]     for e in ergebnisse])
+    s  = np.mean([e["stairs"]        for e in ergebnisse])
+    w  = np.mean([e["avg_wartezeit"] for e in ergebnisse])
     print(f"  {label:<22s}  Ø Reward {r:8.1f}  |  "
-          f"Abgeliefert {d:6.1f}  |  Treppenhaus {s:5.1f}")
+          f"Aufzug {d:6.1f}  |  Treppe {s:5.1f}  |  Ø Wartezeit {w:6.1f}s")
+    print(f"Anteil Treppe:  {s / (d + s)}")
 
 
 best_zip = os.path.join(OUTPUT_DIR, "best_model.zip")
@@ -156,11 +165,3 @@ best_oder_final = (
     if os.path.exists(best_zip)
     else final_path
 )
-print(f"""
-─── RL-Modell in der echten Simulation verwenden ───
-    from stable_baselines3 import PPO
-    from Model.strategie import RLStrategie
-    from simulation import main
-
-    main(strategie=RLStrategie(PPO.load(r"{best_oder_final}")))
-""")

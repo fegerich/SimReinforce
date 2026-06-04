@@ -17,11 +17,12 @@ class Buero:
     """
     def __init__(self, env, etagen, aufzuege, abgeschlossene,
                  spawn_ende, max_patience, tageszeiten, default_spawn,
-                 schrittlogger=None):
+                 schrittlogger=None, aufgenommene=None):
         self.env            = env
         self.etagen         = etagen
         self.aufzuege       = aufzuege
         self.abgeschlossene = abgeschlossene  # Sammelliste aller abgeschlossenen Fahrgäste
+        self.aufgenommene   = aufgenommene    # Sammelliste aller eingestiegenen Fahrgäste (optional)
         self.spawn_ende     = spawn_ende       # Simulationszeit ab der kein Spawning mehr stattfindet
         self.max_patience   = max_patience     # Sekunden bis ein Fahrgast die Treppe nimmt
         self.tageszeiten    = tageszeiten
@@ -104,6 +105,8 @@ class Buero:
             return
 
         fahrgast.einsteigzeit = self.env.now
+        if self.aufgenommene is not None:
+            self.aufgenommene.append(fahrgast)
 
         yield fahrgast.angekommen
         fahrgast.ankunftszeit = self.env.now

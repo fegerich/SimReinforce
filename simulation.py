@@ -24,8 +24,8 @@ MAX_KAPAZITAET = 5        # Maximale Anzahl Fahrgäste pro Aufzug
 MAX_PATIENCE   = 240      # Sekunden bis ein Fahrgast die Treppe nimmt
 SEED           = 17
 
-ZEIGE_VISUALISERUNG = True
-ZEIGE_STATISTIKEN   = True
+ZEIGE_VISUALISERUNG = False
+ZEIGE_STATISTIKEN   = False
 
 # Spawning Konfigurationen — Gewichte: Liste (z.B. [70, 30]) oder None für Gleichverteilung
 DEFAULT_SPAWN = Tageszeit(
@@ -170,4 +170,5 @@ def main(strategie: Strategie = None):
 
 
 if __name__ == "__main__":
-    main(strategie=RLStrategie(PPO.load("Output/rl_training/best_model")))
+    #main(strategie=RLStrategie(PPO.load("Output/rl_training/best_model")))
+    main()

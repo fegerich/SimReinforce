@@ -9,17 +9,20 @@ verluste durch vereinfachte Physik oder andere Spawn-Logik.
 Observation (27 float32):
     [0:3]   Aktuelle Etage jedes Aufzugs        (0 – 9)
     [3:6]   Passagiere im Aufzug                (0 – 5)
-    [6:16]  Wartende ↑ pro Etage                (0 – 50)
-    [16:26] Wartende ↓ pro Etage                (0 – 50)
+    [6:16]  Wartende ↑ pro Etage                (0 – 100)
+    [16:26] Wartende ↓ pro Etage                (0 – 100)
     [26]    Normierte Simulationszeit            (0 – 1)
 
 Action:
-    MultiDiscrete([10, 10, 10]) – Zieletage für Aufzug A, B, C
+    MultiDiscrete([3, 3, 3]) – pro Aufzug: 0 = warten, 1 = eine Etage hoch, 2 = eine Etage runter
 
 Reward (pro Schritt):
-    + max(0, 1 − Wartezeit/MAX_PATIENCE)  je abgeliefertem Passagier
-    − 2.0                                  je Passagier der Treppe nimmt
-    − 0.01 × (Anzahl aktuell Wartender)   laufende Strafe
+    + 10 + max(240 − Wartezeit_beim_Einsteigen, 0)   je aufgenommenem Passagier
+    + 75                                               je abgeliefertem Passagier
+    + 5 × Anzahl Aufzüge in richtiger Richtung        Richtungs-Bonus
+    − 10                                               je Leerfahrt ohne Wartende
+    − 15                                               je Passagier der Treppe nimmt
+    − 0.5 × Sekunden_nach_18h                         wenn noch Passagiere im Gebäude
 """
 
 from __future__ import annotations
@@ -43,14 +46,14 @@ class ElevatorEnv(gym.Env):
 
     metadata = {"render_modes": ["human", "ansi"], "render_fps": 4}
 
-    # ── Parameter identisch mit simulation.py ──────────────────────────
+    # Parameter identisch mit simulation.py 
     NUM_FLOORS: int = 10
     NUM_ELEVATORS: int = 3
     MAX_CAPACITY: int = 5
     TRAVEL_TIME: int = 5       # Sekunden je Etage
     DOOR_TIME: int = 5         # halt_zeit: Sekunden für Türbewegung
     MAX_PATIENCE: int = 240    # Sekunden bis Treppenhaus
-    SPAWN_ENDE: int = 36_000   # Kein Spawning mehr ab dieser Zeit
+    SPAWN_ENDE: int = 36_000   # Simulationszeit = 18:00 Uhr
     EPISODE_DURATION: float = 40_000.0  # Puffer für Nachzügler
     STEP_DURATION: float = 5.0
 
@@ -59,11 +62,11 @@ class ElevatorEnv(gym.Env):
     def __init__(self, render_mode: Optional[str] = None) -> None:
         super().__init__()
         self.render_mode = render_mode
-
+        # Observation Space intitialisieren
         high = np.array(
             [float(self.NUM_FLOORS - 1)] * self.NUM_ELEVATORS
             + [float(self.MAX_CAPACITY)] * self.NUM_ELEVATORS
-            + [50.0] * (self.NUM_FLOORS * 2)
+            + [500.0] * (self.NUM_FLOORS * 2)
             + [1.0],
             dtype=np.float32,
         )
@@ -72,8 +75,9 @@ class ElevatorEnv(gym.Env):
             high=high,
             dtype=np.float32,
         )
+        # Action Space intialiseren
         self.action_space = spaces.MultiDiscrete(
-            [self.NUM_FLOORS] * self.NUM_ELEVATORS
+            [3] * self.NUM_ELEVATORS  # 0=warten, 1=hoch, 2=runter
         )
 
         self._sim: Optional[simpy.Environment] = None
@@ -82,8 +86,9 @@ class ElevatorEnv(gym.Env):
         self._strategie: Optional[ZielEtageStrategie] = None
         self._office: Optional[Buero] = None
         self._abgeschlossene: list = []
+        self._aufgenommene: list = []
 
-    # ── Gymnasium API ──────────────────────────────────────────────────
+    # Gymnasium API 
 
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
         super().reset(seed=seed)
@@ -98,28 +103,47 @@ class ElevatorEnv(gym.Env):
         if self._sim is None:
             raise RuntimeError("reset() muss vor step() aufgerufen werden")
 
-        for i, tgt in enumerate(action):
-            self._strategie.setze_ziel(
-                chr(ord("A") + i),
-                int(np.clip(tgt, 0, self.NUM_FLOORS - 1)),
-            )
+        for i, akt in enumerate(action):
+            a = self._aufzuege[i]
+            if akt == 1:
+                ziel = min(a.aktuelle_etage + 1, self.NUM_FLOORS - 1)
+            elif akt == 2:
+                ziel = max(a.aktuelle_etage - 1, 0)
+            else:
+                ziel = a.aktuelle_etage
+            self._strategie.setze_ziel(chr(ord("A") + i), ziel)
 
-        n_vorher = len(self._abgeschlossene)
+        # Zustand vor dem Schritt für Leerfahrt-Erkennung snapshot
+        pos_start   = [a.aktuelle_etage for a in self._aufzuege]
+        empty_start = [len(a.im_aufzug) == 0 for a in self._aufzuege]
+        keine_wartenden_start = not any(
+            len(e.store_up.items) + len(e.store_down.items) > 0
+            for e in self._etagen
+        )
+
+        n_abgeschl_vorher = len(self._abgeschlossene)
+        n_aufgenom_vorher = len(self._aufgenommene)
         self._sim.run(until=self._sim.now + self.STEP_DURATION)
 
-        neue = self._abgeschlossene[n_vorher:]
-        obs = self._observe()
-        reward = float(self._compute_reward(neue))
+        neue_abgeschlossene = self._abgeschlossene[n_abgeschl_vorher:]
+        neue_aufgenommene   = self._aufgenommene[n_aufgenom_vorher:]
+
+        obs    = self._observe()
+        reward = float(self._compute_reward(
+            neue_aufgenommene, neue_abgeschlossene,
+            pos_start, empty_start, keine_wartenden_start,
+        ))
         terminated = bool(self._office.fertig.triggered)
-        truncated = bool((not terminated) and (self._sim.now >= self.EPISODE_DURATION))
+        truncated  = bool((not terminated) and (self._sim.now >= self.EPISODE_DURATION))
         info = {
-            "sim_time": float(self._sim.now),
-            "waiting": int(
-                sum(len(e.store_up.items) + len(e.store_down.items)
-                    for e in self._etagen)
-            ),
-            "delivered": int(sum(1 for fg in neue if not fg.nimmt_treppenhaus)),
-            "stairs": int(sum(1 for fg in neue if fg.nimmt_treppenhaus)),
+            "sim_time":       float(self._sim.now),
+            "waiting":        int(sum(
+                len(e.store_up.items) + len(e.store_down.items) for e in self._etagen
+            )),
+            "delivered":      int(sum(1 for fg in neue_abgeschlossene if not fg.nimmt_treppenhaus)),
+            "stairs":         int(sum(1 for fg in neue_abgeschlossene if fg.nimmt_treppenhaus)),
+            "wartezeit_summe": float(sum(fg.wartezeit for fg in neue_abgeschlossene if fg.wartezeit is not None)),
+            "wartezeit_anz":  int(sum(1 for fg in neue_abgeschlossene if fg.wartezeit is not None)),
         }
         return obs, reward, terminated, truncated, info
 
@@ -154,13 +178,14 @@ class ElevatorEnv(gym.Env):
     def close(self) -> None:
         self._sim = None
 
-    # ── Simulation aufbauen ────────────────────────────────────────────
+    # Simulation aufbauen 
 
     def _build_sim(self) -> None:
         self._sim = simpy.Environment()
         self._etagen = [Etage(self._sim, i) for i in range(self.NUM_FLOORS)]
         self._strategie = ZielEtageStrategie()
         self._abgeschlossene = []
+        self._aufgenommene   = []
 
         self._aufzuege = [
             Fahrstuhl(
@@ -192,25 +217,68 @@ class ElevatorEnv(gym.Env):
             tageszeiten,
             default_spawn,
             schrittlogger=None,
+            aufgenommene=self._aufgenommene,
         )
         self._sim.process(self._office.fahrgast_generator())
 
-    # ── Reward & Beobachtung ───────────────────────────────────────────
+    # Reward 
 
-    def _compute_reward(self, neue_fahrgaeste: list) -> float:
+    def _compute_reward(
+        self,
+        neue_aufgenommene: list,
+        neue_abgeschlossene: list,
+        pos_start: list[int],
+        empty_start: list[bool],
+        keine_wartenden_start: bool,
+    ) -> float:
         reward = 0.0
-        for fg in neue_fahrgaeste:
-            if fg.nimmt_treppenhaus:
-                reward -= 2.0
-            else:
-                reward += max(0.0, 1.0 - fg.wartezeit / self.MAX_PATIENCE)
-        total_waiting = sum(
-            len(e.store_up.items) + len(e.store_down.items)
-            for e in self._etagen
-        )
-        reward -= 0.01 * total_waiting
-        return reward
 
+        # 1. Aufnahme-Belohnung: +10 Grundbonus + max(240 - Wartezeit, 0) je Passagier
+        for fg in neue_aufgenommene:
+            wartezeit_pickup = fg.einsteigzeit - fg.spawnzeit
+            reward += 10.0 + max(240.0 - wartezeit_pickup, 0.0)
+
+        # 2. Ablieferungs-Belohnung: +75 je erfolgreich abgeliefertem Passagier
+        for fg in neue_abgeschlossene:
+            if not fg.nimmt_treppenhaus:
+                reward += 75.0
+
+        # 3. Richtungs-Belohnung: +5 je Aufzug der sich zur durchschnittlichen Zieletage bewegt
+        alle_ziele = [
+            fg.ziel
+            for e in self._etagen
+            for fg in list(e.store_up.items) + list(e.store_down.items)
+        ] + [fg.ziel for a in self._aufzuege for fg in a.im_aufzug]
+
+        if alle_ziele:
+            avg_ziel = sum(alle_ziele) / len(alle_ziele)
+            for a in self._aufzuege:
+                if a.aktuelle_etage < avg_ziel and a.fahrtrichtung == "up":
+                    reward += 5.0
+                elif a.aktuelle_etage > avg_ziel and a.fahrtrichtung == "down":
+                    reward += 5.0
+
+        # 4. Leerfahrt-Strafe: -10 wenn leerer Aufzug fuhr obwohl niemand wartete
+        for i, a in enumerate(self._aufzuege):
+            if empty_start[i] and keine_wartenden_start and a.aktuelle_etage != pos_start[i]:
+                reward -= 10.0
+
+        # 5. Treppenhaus-Strafe: -15 je Passagier der die Treppe nimmt
+        for fg in neue_abgeschlossene:
+            if fg.nimmt_treppenhaus:
+                reward -= 15.0
+
+        # 6. Zeitüberschreitung-Strafe: -(0.5 × Sekunden nach 18h) wenn noch Passagiere im Gebäude
+        if self._sim.now > self.SPAWN_ENDE:
+            passagiere_im_gebaeude = sum(
+                len(e.store_up.items) + len(e.store_down.items) for e in self._etagen
+            ) + sum(len(a.im_aufzug) for a in self._aufzuege)
+            if passagiere_im_gebaeude > 0:
+                reward -= 0.5 * (self._sim.now - self.SPAWN_ENDE)
+
+        return reward
+    
+    # Observation Space befüllen
     def _observe(self) -> np.ndarray:
         obs = np.zeros(self._OBS_DIM, dtype=np.float32)
         for i, a in enumerate(self._aufzuege):
@@ -225,7 +293,7 @@ class ElevatorEnv(gym.Env):
         return obs
 
 
-# ── Tageszeiten (identisch mit simulation.py, ohne random.randint) ────
+# Tageszeiten (identisch mit simulation.py, ohne random.randint) 
 
 def _build_tageszeiten(num_etagen: int) -> tuple[list[Tageszeit], Tageszeit]:
     obere = list(range(1, num_etagen))

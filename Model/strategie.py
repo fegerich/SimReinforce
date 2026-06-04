@@ -177,10 +177,14 @@ class RLStrategie(ZielEtageStrategie):
     def _aktualisiere_ziele(self, sim_now: float) -> None:
         obs = self._beobachtung(sim_now)
         aktionen, _ = self.model.predict(obs, deterministic=True)
-        for aufzug, ziel in zip(self._aufzuege, aktionen):
-            self._ziele[aufzug.aufzug_id] = int(
-                np.clip(ziel, 0, self._NUM_FLOORS - 1)
-            )
+        for aufzug, akt in zip(self._aufzuege, aktionen):
+            if akt == 1:
+                ziel = min(aufzug.aktuelle_etage + 1, self._NUM_FLOORS - 1)
+            elif akt == 2:
+                ziel = max(aufzug.aktuelle_etage - 1, 0)
+            else:
+                ziel = aufzug.aktuelle_etage
+            self._ziele[aufzug.aufzug_id] = ziel
         self._letzter_entscheid = sim_now
 
     def _beobachtung(self, sim_now: float) -> np.ndarray:
