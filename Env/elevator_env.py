@@ -17,12 +17,11 @@ Action:
     MultiDiscrete([3, 3, 3]) – pro Aufzug: 0 = warten, 1 = eine Etage hoch, 2 = eine Etage runter
 
 Reward (pro Schritt):
-    + 10 + max(240 − Wartezeit_beim_Einsteigen, 0)   je aufgenommenem Passagier
-    + 75                                               je abgeliefertem Passagier
-    + 5 × Anzahl Aufzüge in richtiger Richtung        Richtungs-Bonus
-    − 10                                               je Leerfahrt ohne Wartende
-    − 15                                               je Passagier der Treppe nimmt
-    − 0.5 × Sekunden_nach_18h                         wenn noch Passagiere im Gebäude
+    + 1 + max(1 − Wartezeit/240, 0)                   je aufgenommenem Passagier  (max +2)
+    + 5                                                je abgeliefertem Passagier
+    − 1                                                je Leerfahrt ohne Wartende
+    − 3                                                je Passagier der Treppe nimmt
+    − min(0.05 × Sekunden_nach_18h, 5)                wenn noch Passagiere im Gebäude
 """
 
 from __future__ import annotations
@@ -66,7 +65,7 @@ class ElevatorEnv(gym.Env):
         high = np.array(
             [float(self.NUM_FLOORS - 1)] * self.NUM_ELEVATORS
             + [float(self.MAX_CAPACITY)] * self.NUM_ELEVATORS
-            + [500.0] * (self.NUM_FLOORS * 2)
+            + [150.0] * (self.NUM_FLOORS * 2)
             + [1.0],
             dtype=np.float32,
         )
@@ -178,7 +177,20 @@ class ElevatorEnv(gym.Env):
     def close(self) -> None:
         self._sim = None
 
-    # Simulation aufbauen 
+    def action_masks(self) -> np.ndarray:
+        """Gibt eine boolesche Maske zurück die ungültige Aktionen sperrt.
+        Format: [a0_warten, a0_hoch, a0_runter,  a1_warten, ...] (Länge 9)
+        Hoch gesperrt wenn Aufzug auf oberster Etage, runter wenn auf unterster.
+        """
+        mask = np.ones(self.NUM_ELEVATORS * 3, dtype=bool)
+        for i, a in enumerate(self._aufzuege):
+            if a.aktuelle_etage >= self.NUM_FLOORS - 1:
+                mask[i * 3 + 1] = False  # hoch nicht möglich
+            if a.aktuelle_etage <= 0:
+                mask[i * 3 + 2] = False  # runter nicht möglich
+        return mask
+
+    # Simulation aufbauen
 
     def _build_sim(self) -> None:
         self._sim = simpy.Environment()
@@ -233,48 +245,33 @@ class ElevatorEnv(gym.Env):
     ) -> float:
         reward = 0.0
 
-        # 1. Aufnahme-Belohnung: +10 Grundbonus + max(240 - Wartezeit, 0) je Passagier
+        # 1. Aufnahme-Belohnung: +1 Grundbonus + max(1 - Wartezeit/240, 0) je Passagier
         for fg in neue_aufgenommene:
             wartezeit_pickup = fg.einsteigzeit - fg.spawnzeit
-            reward += 10.0 + max(240.0 - wartezeit_pickup, 0.0)
+            reward += 1.0 + max(1.0 - wartezeit_pickup / self.MAX_PATIENCE, 0.0)
 
-        # 2. Ablieferungs-Belohnung: +75 je erfolgreich abgeliefertem Passagier
+        # 2. Ablieferungs-Belohnung: +5 je erfolgreich abgeliefertem Passagier
         for fg in neue_abgeschlossene:
             if not fg.nimmt_treppenhaus:
-                reward += 75.0
+                reward += 5.0
 
-        # 3. Richtungs-Belohnung: +5 je Aufzug der sich zur durchschnittlichen Zieletage bewegt
-        alle_ziele = [
-            fg.ziel
-            for e in self._etagen
-            for fg in list(e.store_up.items) + list(e.store_down.items)
-        ] + [fg.ziel for a in self._aufzuege for fg in a.im_aufzug]
-
-        if alle_ziele:
-            avg_ziel = sum(alle_ziele) / len(alle_ziele)
-            for a in self._aufzuege:
-                if a.aktuelle_etage < avg_ziel and a.fahrtrichtung == "up":
-                    reward += 5.0
-                elif a.aktuelle_etage > avg_ziel and a.fahrtrichtung == "down":
-                    reward += 5.0
-
-        # 4. Leerfahrt-Strafe: -10 wenn leerer Aufzug fuhr obwohl niemand wartete
+        # 3. Leerfahrt-Strafe: -1 wenn leerer Aufzug fuhr obwohl niemand wartete
         for i, a in enumerate(self._aufzuege):
             if empty_start[i] and keine_wartenden_start and a.aktuelle_etage != pos_start[i]:
-                reward -= 10.0
+                reward -= 1.0
 
-        # 5. Treppenhaus-Strafe: -15 je Passagier der die Treppe nimmt
+        # 5. Treppenhaus-Strafe: -3 je Passagier der die Treppe nimmt
         for fg in neue_abgeschlossene:
             if fg.nimmt_treppenhaus:
-                reward -= 15.0
+                reward -= 3.0
 
-        # 6. Zeitüberschreitung-Strafe: -(0.5 × Sekunden nach 18h) wenn noch Passagiere im Gebäude
+        # 6. Zeitüberschreitung-Strafe: gedeckelt bei -5 pro Schritt
         if self._sim.now > self.SPAWN_ENDE:
             passagiere_im_gebaeude = sum(
                 len(e.store_up.items) + len(e.store_down.items) for e in self._etagen
             ) + sum(len(a.im_aufzug) for a in self._aufzuege)
             if passagiere_im_gebaeude > 0:
-                reward -= 0.5 * (self._sim.now - self.SPAWN_ENDE)
+                reward -= min(0.05 * (self._sim.now - self.SPAWN_ENDE), 5.0)
 
         return reward
     

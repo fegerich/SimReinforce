@@ -1,3 +1,6 @@
+import os
+os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+import torch  # noqa: F401 – muss vor pygame/numpy geladen werden (Windows/Conda shm.dll-Konflikt)
 import pygame
 import csv
 import copy

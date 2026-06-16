@@ -1,6 +1,11 @@
+import os
+os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+
+import torch  # noqa: F401 – muss vor sb3_contrib/numpy geladen werden (Windows/Conda shm.dll)
+from sb3_contrib import MaskablePPO
+
 import simpy
 import random
-import os
 from datetime import datetime
 from Model.etage import Etage
 from Model.farhrstuhl import Fahrstuhl
@@ -10,7 +15,7 @@ from Model.strategie import ScanStrategie, Strategie, RLStrategie
 from Visualisierung.logger import Logger
 from Visualisierung.plotter import Plottter
 from Visualisierung.animator import Animator
-from stable_baselines3 import PPO
+
 
 
 
@@ -24,8 +29,8 @@ MAX_KAPAZITAET = 5        # Maximale Anzahl Fahrgäste pro Aufzug
 MAX_PATIENCE   = 240      # Sekunden bis ein Fahrgast die Treppe nimmt
 SEED           = 17
 
-ZEIGE_VISUALISERUNG = False
-ZEIGE_STATISTIKEN   = False
+ZEIGE_VISUALISERUNG = True
+ZEIGE_STATISTIKEN   = True
 
 # Spawning Konfigurationen — Gewichte: Liste (z.B. [70, 30]) oder None für Gleichverteilung
 DEFAULT_SPAWN = Tageszeit(
@@ -170,5 +175,7 @@ def main(strategie: Strategie = None):
 
 
 if __name__ == "__main__":
-    #main(strategie=RLStrategie(PPO.load("Output/rl_training/best_model")))
-    main()
+    # Simlation mit RL Strategie
+    main(strategie=RLStrategie(MaskablePPO.load("Output/rl_training/best_model")))
+    # Simualtion mit Scanning Strategie
+    #main()
