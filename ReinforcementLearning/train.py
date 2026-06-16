@@ -14,7 +14,7 @@ Ausführen
 
 TensorBoard (während oder nach dem Training)
 --------------------------------------------
-    tensorboard --logdir ReinforcementLearning/Output/rl_training/tb_logs
+    tensorboard --logdir ReinforcementLearning/rl_training_output/tb_logs
 """
 
 import os
@@ -49,7 +49,7 @@ import Env  # noqa: F401 – registriert "ElevatorEnv-v0" bei Gymnasium
 import gymnasium
 
 # Konfiguration
-OUTPUT_DIR   = os.path.join(_RL_DIR, "Output", "rl_training")
+OUTPUT_DIR   = os.path.join(_RL_DIR, "rl_training_output")
 N_ENVS          = 4          # Parallele Trainingsumgebungen
 TOTAL_TIMESTEPS = 10_000_000
 SEED            = 42
