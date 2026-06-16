@@ -1,5 +1,5 @@
 """
-Beispieltraining eines PPO-Agenten für die Fahrstuhlsimulation.
+Training des PPO-Agenten für die Fahrstuhlsimulation.
 
 Ablauf
 ------
@@ -7,7 +7,6 @@ Ablauf
 2. PPO-Modell konfigurieren und trainieren
 3. Bestes Modell speichern
 4. Schnellvergleich: RL-Agent vs. Zufallsstrategie in der Gym-Umgebung
-5. Hinweis für vollständigen SCAN-Vergleich in simulation.py
 
 Ausführen
 ---------
@@ -175,9 +174,4 @@ if os.path.exists(best_zip):
 evaluiere(MaskablePPO.load(final_path), "RL  (letztes Modell)")
 evaluiere(None,                 "Zufallsstrategie   ")
 
-# ── 6. Verwendung in der echten Simulation ─────────────────────────────
-best_oder_final = (
-    os.path.join(OUTPUT_DIR, "best_model")
-    if os.path.exists(best_zip)
-    else final_path
-)
+
