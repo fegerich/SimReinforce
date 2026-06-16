@@ -176,6 +176,6 @@ def main(strategie: Strategie = None):
 
 if __name__ == "__main__":
     # Simlation mit RL Strategie
-    main(strategie=RLStrategie(MaskablePPO.load("Output/rl_training/best_model")))
+    main(strategie=RLStrategie(MaskablePPO.load("ReinforcementLearning/Output/rl_training/best_model")))
     # Simualtion mit Scanning Strategie
-    #main()
+    main()

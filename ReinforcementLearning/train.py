@@ -11,11 +11,11 @@ Ablauf
 
 Ausführen
 ---------
-    conda run -n sim_reinforce_fg python train.py
+    conda run -n sim_reinforce_fg python ReinforcementLearning/train.py
 
 TensorBoard (während oder nach dem Training)
 --------------------------------------------
-    tensorboard --logdir Output/rl_training/tb_logs
+    tensorboard --logdir ReinforcementLearning/Output/rl_training/tb_logs
 """
 
 import os
@@ -41,19 +41,21 @@ from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
 import numpy as np
 
-sys.path.insert(0, os.path.dirname(__file__))
+_RL_DIR      = os.path.dirname(os.path.abspath(__file__))   # .../ReinforcementLearning
+_PROJECT_ROOT = os.path.dirname(_RL_DIR)                     # .../SimReinforce
+sys.path.insert(0, _PROJECT_ROOT)  # für Model.* in elevator_env.py
+sys.path.insert(0, _RL_DIR)        # für Env-Paket
 import Env  # noqa: F401 – registriert "ElevatorEnv-v0" bei Gymnasium
 
 import gymnasium
 
-# Konfiguration 
-OUTPUT_DIR      = os.path.join("Output", "rl_training")
+# Konfiguration
+OUTPUT_DIR   = os.path.join(_RL_DIR, "Output", "rl_training")
 N_ENVS          = 4          # Parallele Trainingsumgebungen
-TOTAL_TIMESTEPS = 10_000_000    
+TOTAL_TIMESTEPS = 10_000_000
 SEED            = 42
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
-os.makedirs("Output", exist_ok=True)
 
 # 1. Umgebungen 
 print("Erstelle Umgebungen …")
