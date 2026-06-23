@@ -69,7 +69,7 @@ model = MaskablePPO(
     train_env,
     verbose=1,
     seed=SEED,
-    policy_kwargs=dict(net_arch=[64, 128, 128], activation_fn=th.nn.ReLU),
+    policy_kwargs=dict(net_arch=[128, 256, 128], activation_fn=th.nn.ReLU),
     # Hyperparameter
     learning_rate=lambda progress: 3e-4 * progress,
     n_steps=4096,      # Schritte je Update-Zyklus pro Env
@@ -78,7 +78,7 @@ model = MaskablePPO(
     gamma=0.995,       # Hoher Discount-Faktor: Episoden sind ~8 000 Schritte lang
     gae_lambda=0.95,
     ent_coef=0.04,     # Entropie-Bonus hält Exploration aufrecht
-    vf_coef=0.4,
+    vf_coef=0.2,
     clip_range=0.3,
     tensorboard_log=os.path.join(OUTPUT_DIR, "tb_logs"),
 )
